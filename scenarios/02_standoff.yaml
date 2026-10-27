@@ -55,7 +55,35 @@ platforms:
     pos: [9830, 6880]        # 12 km / 35°：静止待机目标
     emitters: []
 
-sensors: []
+sensors:
+  # 蓝方三部 ESM。
+  #
+  # 与 01_duel 不同，这里的干扰机只有 1 W：如果沿用 1 MHz 带宽 + 12 dB 噪声系数，
+  # 60 km 处的信噪比只有 0.3，ESM 什么都收不到（Pd≈1e-5），复盘就没有意义。
+  # 所以这里用窄带通道（100 kHz）+ 6 dB 噪声系数，让"越近越好截获"落在
+  # 有意义的区间：60 km 处 Pd≈0.3，10 km 处接近 1。
+  # 参数仍是虚构值；这条说明是给读想定的人看的，不是物理结论。
+  - id: esm_1
+    kind: esm
+    side: blue
+    pos: [0, -25000]
+    noise_figure_db: 6.0
+    bw_hz: 1.0e5
+  - id: esm_2
+    kind: esm
+    side: blue
+    pos: [0, 25000]
+    noise_figure_db: 6.0
+    bw_hz: 1.0e5
+  - id: esm_3
+    kind: esm
+    side: blue
+    pos: [-25000, 0]
+    noise_figure_db: 6.0
+    bw_hz: 1.0e5
 
 objectives:
+  # detect：雷达要探测 target_c（T1 动画用）
+  # localize：蓝方 ESM 要定位 jammer_b（AAR 用，门槛 500 m）
   - {type: detect, target: target_c}
+  - {type: localize, target: jammer_b, cep_m: 500}

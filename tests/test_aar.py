@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import re
+from pathlib import Path
 
 import pytest
 
 from spectrumfog import aar
 from spectrumfog.engine.sim import Simulation
-from spectrumfog.model.scenario import parse_scenario
-from spectrumfog.replay import Replay, write_replay
+from spectrumfog.model.scenario import load_scenario, parse_scenario
+from spectrumfog.replay import Replay, build_frames, write_replay
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 def _scenario(**overrides) -> dict:
@@ -102,6 +105,20 @@ def test_threshold_changes_the_first_effective_moment(replay):
     assert loose.first_effective_s <= (strict.first_effective_s or 10**9)
     if strict.first_effective_s is None:
         assert "全程没有被有效定位" in strict.sentence
+
+
+def test_aar_picks_the_localized_emitter_not_the_detected_target():
+    """02_standoff 里有 detect: target_c 和 localize: jammer_b，复盘必须选后者。"""
+    scenario = load_scenario(REPO_ROOT / "scenarios" / "02_standoff.yaml")
+    result = Simulation(scenario).run()
+    replay = Replay(
+        meta=result.meta,
+        frames=build_frames([e for e in result.events if e["kind"] != "meta"]),
+    )
+    report = aar.analyse(replay)
+
+    assert report.emitter == "jammer_b"
+    assert "target_c" not in report.sentence
 
 
 def test_single_sensor_cannot_localise(tmp_path):

@@ -151,6 +151,16 @@ def test_target_falls_back_to_jammer_without_detect_objective():
     assert links[0]["range_target_m"] == pytest.approx(links[0]["range_jammer_m"])
 
 
+def test_meta_separates_detect_target_from_localize_target():
+    """`target` 是雷达要探测的，`localize_target` 是被 ESM 定位的——两者不能混。"""
+    scenario = load_scenario(STANDOFF_YAML)
+    result = Simulation(scenario).run()
+
+    assert result.meta["target"] == "target_c"
+    assert result.meta["localize_target"] == "jammer_b"
+    assert result.meta["cep_threshold_m"] == pytest.approx(500.0)
+
+
 def test_state_events_carry_positions_and_emitters():
     scenario = load_scenario(STANDOFF_YAML)
     result = Simulation(scenario).run()

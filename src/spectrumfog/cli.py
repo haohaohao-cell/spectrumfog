@@ -408,7 +408,9 @@ def _aar(args: argparse.Namespace) -> int:
         return 1
 
     try:
-        report = aar.analyse(replay, threshold_m=args.cep_threshold)
+        report = aar.analyse(
+            replay, threshold_m=args.cep_threshold, emitter=args.target
+        )
     except ValueError as exc:
         print(f"[错误] 复盘失败：{exc}", file=sys.stderr)
         return 1
@@ -544,6 +546,12 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         default=None,
         help="有效定位的 CEP 门槛 [m]（默认取 replay meta，再缺省 500）",
+    )
+    aar_parser.add_argument(
+        "--target",
+        default=None,
+        metavar="PLATFORM_ID",
+        help="被定位的平台（默认取 localize objective）",
     )
     return parser
 

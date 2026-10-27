@@ -116,15 +116,23 @@ waypoints:
 
 ### sensors[]
 
+ESM 传感器从 T3a 起真正参与解算：每 tick 只看**对方阵营**的辐射源，产出带噪声的
+AOA / TOA / 频率 / 功率，交给 `engine/fusion.py` 定位。
+
 | 字段 | 类型 | 默认 | 说明 |
 |---|---|---|---|
-| `id` | str | 必填 | 唯一 |
-| `kind` | `esm` \| `radar` | `esm` | v1 只用 `esm` |
+| `id` | str | 必填 | 唯一，会出现在 replay 的 `measurement.sensor` 里 |
+| `kind` | `esm` \| `radar` | `esm` | 现在只有 `esm` 参与解算 |
+| `side` | `blue` \| `red` | `blue` | 决定它观察哪一方 |
 | `pos` | `[float, float]` | `[0, 0]` | 米 |
-| `noise_figure_db` | float | 6.0 | dB |
-| `bw_hz` | float > 0 | 1e6 | 瞬时带宽 [Hz] |
+| `noise_figure_db` | float | 6.0 | dB；直接决定灵敏度 |
+| `bw_hz` | float > 0 | 1e6 | 瞬时带宽 [Hz]；窄带宽 = 更灵敏 |
+| `gain_db` | float | 0.0 | 天线增益 [dBi]，v1 按全向 |
+| `pfa_scan` | float ∈ (0,1) | 1e-4 | 单次扫描虚警率，虚假目标的来源 |
 
-T0 还没有传感器参与解算的代码，这些字段先占位；ESM 的检测流程在 T1 的 `engine/detect.py`。
+**灵敏度是调出来的，不是猜的**：`02_standoff` 里的干扰机只有 1 W，
+用 1 MHz / 12 dB 的 ESM 在 60 km 处 SNR 只有 0.3（Pd ≈ 1e-5，什么都收不到），
+所以那份想定改成 100 kHz / 6 dB。想定里的参数是可解释的虚构值，不是真实装备。
 
 ### objectives[]
 
@@ -133,6 +141,12 @@ T0 还没有传感器参与解算的代码，这些字段先占位；ESM 的检�
 | `type` | `localize` \| `detect` \| `protect_link` | 必填 | 验收类型 |
 | `target` | str | 必填 | 平台 id，必须存在 |
 | `cep_m` | float > 0 | null | 定位精度门槛 [m] |
+
+两种 type 的含义**不同**，别混：
+
+* `detect`：雷达要探测这个平台（T1 动画用它挑目标，写进 `meta.target`）；
+* `localize`：对方 ESM 要定位这个辐射源（AAR 用它挑对象，写进 `meta.localize_target`，
+  门槛 `cep_m` 写进 `meta.cep_threshold_m`）。
 
 ## 3. 单位后缀（加载时换算，§6.2）
 

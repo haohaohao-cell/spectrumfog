@@ -118,6 +118,7 @@ class Simulation:
             "burn_through_self_m": burn_through_self_m,
             "noise_power_w": pn_w,
             "cep_threshold_m": self._cep_threshold(),
+            "localize_target": self._localize_target(),
         }
 
         events: list[dict[str, Any]] = [meta]
@@ -344,6 +345,17 @@ class Simulation:
             if objective.type == "localize" and objective.cep_m is not None:
                 return float(objective.cep_m)
         return 500.0
+
+    def _localize_target(self) -> str | None:
+        """被定位的目标平台 id（localize objective）。
+
+        注意它和 ``meta["target"]`` 不是一回事：后者是雷达要**探测**的平台，
+        AAR 关心的是被对方 ESM **定位**的那个辐射源。
+        """
+        for objective in self.scenario.objectives:
+            if objective.type == "localize":
+                return objective.target
+        return None
 
     def _target_platform(self, jammer_platform: Platform) -> Platform:
         """目标 = 想定里 ``type: detect`` 的 objective 指向的平台。

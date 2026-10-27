@@ -84,7 +84,12 @@ def analyse(
 ) -> AarReport:
     """把一份 replay 变成可解释的复盘结论。"""
     meta = replay.meta
-    target = emitter or str(meta.get("target", ""))
+    # 被定位的是"辐射源"（localize objective），不是雷达要探测的目标（meta.target）
+    target = (
+        emitter
+        or meta.get("localize_target")
+        or str(meta.get("target", ""))
+    )
     limit = float(
         threshold_m
         if threshold_m is not None
