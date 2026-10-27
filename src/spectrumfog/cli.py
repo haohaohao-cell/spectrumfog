@@ -22,6 +22,7 @@ from .model.scenario import Scenario, load_scenario
 from .physics import radar
 from .replay import Replay, write_replay
 from .units import linear_to_db
+from .webexport import build_web_bundle, write_web_bundle
 
 _FOOTNOTE = "参数为虚构值，仅用于教学 / 研究仿真（PROJECT.md §12）"
 
@@ -348,6 +349,54 @@ def _animate(args: argparse.Namespace) -> int:
     return 0
 
 
+# --- export-web：给 T2 前端编译数据包 ----------------------------------------
+
+
+def _export_web(args: argparse.Namespace) -> int:
+    try:
+        scenario = load_scenario(args.scenario)
+    except (FileNotFoundError, ValueError) as exc:
+        print(f"[错误] {exc}", file=sys.stderr)
+        return 1
+
+    try:
+        bundle = build_web_bundle(
+            scenario,
+            pfa=args.pfa,
+            pd_threshold=args.pd_threshold,
+            samples=args.samples,
+        )
+    except ValueError as exc:
+        print(f"[错误] {exc}", file=sys.stderr)
+        return 1
+
+    out_path = args.out or args.out_dir / f"{scenario.meta.name}.web.json"
+    try:
+        write_web_bundle(out_path, bundle)
+    except OSError as exc:
+        print(f"[错误] 写数据包失败：{exc}", file=sys.stderr)
+        return 1
+
+    grid = bundle["grid"]
+    size_kb = out_path.stat().st_size / 1024.0
+    print("SpectrumFog · Web 数据包（物理只在这里算一次，前端只插值）")
+    print(
+        f"  想定 {bundle['scenario']}   Pfa {bundle['pfa']:g}   "
+        f"门槛 Pd {bundle['pd_threshold']:.2f}"
+    )
+    print(
+        f"  二维表 {grid['rt_m']['n']}×{grid['rj_m']['n']}："
+        f"Rt {grid['rt_m']['min']:.0f}–{grid['rt_m']['max']:.0f} m，"
+        f"Rj {grid['rj_m']['min']:.0f}–{grid['rj_m']['max']:.0f} m（对数网格）"
+    )
+    print(
+        f"  曲线   {len(bundle['rings']['jammer_range_m'])} 点："
+        "检测边界 / 烧穿环 / 目标处 Pd 与 J-S"
+    )
+    print(f"  → {out_path}  （{size_kb:.0f} KB）")
+    return 0
+
+
 # --- 参数解析 ----------------------------------------------------------------
 
 
@@ -409,6 +458,24 @@ def build_parser() -> argparse.ArgumentParser:
     animate.add_argument(
         "--stride", type=int, default=1, help="每隔多少帧画一帧（默认 1，用于压体积）"
     )
+
+    export_web = subparsers.add_parser(
+        "export-web", help="把想定编译成前端数据包（T2 用，无后端）"
+    )
+    export_web.add_argument("scenario", type=Path, help="想定 YAML 路径")
+    export_web.add_argument(
+        "--out", type=Path, default=None, help="输出 JSON 路径（默认 out/<name>.web.json）"
+    )
+    export_web.add_argument(
+        "--out-dir", type=Path, default=Path("out"), help="默认输出目录"
+    )
+    export_web.add_argument("--pfa", type=float, default=1.0e-6, help="虚警概率")
+    export_web.add_argument(
+        "--pd-threshold", type=float, default=0.5, help="检测门槛（默认 0.5）"
+    )
+    export_web.add_argument(
+        "--samples", type=int, default=97, help="二维表每轴的采样数（默认 97）"
+    )
     return parser
 
 
@@ -421,6 +488,8 @@ def main(argv: list[str] | None = None) -> int:
         return _sim(args)
     if args.command == "animate":
         return _animate(args)
+    if args.command == "export-web":
+        return _export_web(args)
     parser.error(f"未知子命令：{args.command}")
     return 2
 
