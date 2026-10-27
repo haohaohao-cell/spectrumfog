@@ -341,5 +341,5 @@ T1 一结束就发布（README 换头图 + GIF、仓库公开），不等 T2。
 - [x] T1 2D 动态 + **首次发布**（2026-10-27：`sim --gif` 出 10 s 动画 + 确定性 replay；仓库已公开）
 - [x] T2 Web 交互（2026-10-27：`export-web` 数据包 + Vite/React 交互页 + Pages 上线）
 - [x] T3a AAR 复盘分析（2026-10-27：`spectrumfog aar` 出时间线 + 暴露时长 + 留一法归因 + 单页 HTML）
-- [ ] T3b 平台化（进行中：Gymnasium 环境 + 3 个 baseline + 5 个想定 + `bench --all` 已通；
-      还差文档站与公开排行榜）
+- [ ] T3b 平台化（Gymnasium 环境 + 3 个 baseline + 6 个想定 + `bench --all` + 文档站已通；
+      只剩公开排行榜——需要先给想定集合定版本号）
