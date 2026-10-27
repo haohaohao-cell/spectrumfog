@@ -52,7 +52,23 @@ spectrumfog run scenarios/01_duel.yaml             # 静态曲线：烧穿 / Pd�
 | replay JSONL：一行一事件、逐字节可复现 | ✅ |
 | 俯视动画（包围圈收缩 / Pd·J/S 时间曲线） | ✅ |
 | 观测（AOA/TOA/功率测量）+ 融合定位 + 虚假目标 | ⬜ T3a |
-| Web 交互（拖动干扰机 → 热力图与曲线） | ✅（构建与单测通过；浏览器手测见 [docs/web.md](docs/web.md)） |
+| Web 交互（拖动干扰机 → 热力图与曲线） | ✅ 线上已部署 |
+
+## 两个反直觉的结果（免得你以为算错了）
+
+**1. 烧穿 ≠ 能检测。** `01_duel`（150 kW / 35 dBi 雷达，90 W 干扰机在 30 km）里，
+J/S = 1 的烧穿半径是 3.24 km，但干扰下真正还能维持 Pd = 0.5 的距离只有 0.75 km——差了 4 倍多。
+因为 J/S = 1 只是把信噪比砍掉 3 dB，而这里的 Swerling I 闭式要 Pd = 0.5 得约 20 dB。
+**"目标在烧穿圈内"不等于"雷达看得见它"。**
+
+**2. 1 W 干扰机能压制 150 kW 雷达。** `02_standoff` 里，1 W 干扰机在 60 km、
+目标在 12 km。因为 v1 没有处理增益（脉压、相干积累、MTI）：
+100 MHz 上摊开的 1 W 落进 2 MHz 接收机只剩 20 mW，而 12 km 处的回波本身只有 −67 dBm，
+噪声底是 −108 dBm。若补上 20 dB 处理增益，烧穿距离会涨约 10 倍——所以这些"过小的干扰功率"
+是模型缺口的产物，不是仿真结果。
+
+这两条都是 [docs/design.md](docs/design.md) §5–§6 里写明的取舍，
+完整缺口清单在 [docs/physics.md](docs/physics.md) §7（无处理增益、无多径地形、无航迹状态机）。
 
 ## Web 交互（T2）
 
@@ -82,14 +98,15 @@ src/spectrumfog/
   model/          scenario.py · platform.py · emitter.py · sensor.py —— pydantic
   engine/         clock.py（固定步长）· sim.py（主循环）
   replay.py       JSONL 读写；帧聚合
-  cli.py          run / sim / animate
+  cli.py          run / sim / animate / export-web
 viz/static/
   plot.py         matplotlib 静态图
   animate.py      俯视动画（只读 replay，不回写）
 scenarios/
   01_duel.yaml        T0：单雷达 vs 单干扰机（自屏蔽，静态）
   02_standoff.yaml    T1：站距干扰 + 移动干扰机 + 待机目标（动画）
-tests/              97 项：物理、想定、时钟、回放、确定性、动画、CLI
+tests/              106 项：物理、想定、时钟、回放、确定性、动画、Web 数据包、CLI
+viz/web/src/        16 项前端单测（查表解码、插值、首屏渲染）
 docs/               physics.md（公式与假设）· design.md（建模取舍）· scenario.md（YAML schema）
                     metrics.md（指标定义）· web.md（前端数据包）· launch.md（发布文案）
 ```
@@ -101,8 +118,17 @@ docs/               physics.md（公式与假设）· design.md（建模取舍�
 3. **一个内核，三个面**：CLI / Web / Gym 共用同一份物理，不许各写一套。
 
 内部一律 SI（W / m / Hz / s / rad）；dB、km、MHz 只允许出现在 YAML 输入和终端输出。
-建模取舍与已知缺口见 [docs/physics.md](docs/physics.md) §7——**那里写着"烧穿 ≠ 能检测"**，
-以及为什么 v1 的干扰功率看起来偏小（没有处理增益）。
+
+## 文档地图
+
+| 想知道什么 | 看哪 |
+|---|---|
+| 公式、单位、假设、**已知缺口** | [docs/physics.md](docs/physics.md) |
+| **为什么这么设计**（取舍、被否决的方案） | [docs/design.md](docs/design.md) |
+| 想定 YAML 怎么写 | [docs/scenario.md](docs/scenario.md) |
+| 指标口径（Pd / CEP / 暴露时长…） | [docs/metrics.md](docs/metrics.md) |
+| 网页的数据包怎么来的 | [docs/web.md](docs/web.md) |
+| 路线图与验收标准 | [PROJECT.md](PROJECT.md) |
 
 ## 合规声明
 
