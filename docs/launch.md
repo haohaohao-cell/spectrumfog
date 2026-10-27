@@ -1,6 +1,6 @@
 # 发布文案（launch kit）
 
-> 四个渠道、四种切入角度，不要一稿多投。
+> 五个渠道、五种切入角度，不要一稿多投。
 > 所有文案都已按 [PROJECT.md](../PROJECT.md) §12 调过措辞：不出现"作战/打击/杀伤"，
 > 不暗示任何真实装备，主动交代模型缺口。
 > 代码与数据全部是虚构参数，公开可查。
@@ -55,9 +55,20 @@ What's actually there:
   the only way I could keep "one implementation of the physics" and "no server"
   both true.
 
+- An after-action report. The engine emits ESM observations (angle of arrival,
+  time of arrival, power, misses, false targets), fuses them into a position fix,
+  and the report names which sensors made the fix possible - by re-running the
+  fusion with each one removed. The sentence it produces is "your emitter was
+  effectively localised at t = N", not "you lost".
+
+- A gymnasium environment around the same physics: three baselines, a versioned
+  scenario set, and submissions that carry a sha256 per scenario file, so a
+  leaderboard can be checked without a server.
+
 Deliberate omissions: no processing gain (so the jammer powers look small - 1 W
-spread over 100 MHz against a 2 MHz receiver), no multipath or terrain, no track
-state machine, single emitter pair. The gap list is in docs/physics.md.
+spread over 100 MHz against a 2 MHz receiver), no multipath or terrain, and no
+track state machine. The radar link handles one jammer at a time; ESM sees
+several emitters. The gap list is in docs/physics.md.
 
 Two things the model taught me:
 
@@ -71,6 +82,8 @@ Two things the model taught me:
 
 Repo: https://github.com/haohaohao-cell/spectrumfog
 Demo: https://haohaohao-cell.github.io/spectrumfog/
+Docs: https://haohaohao-cell.github.io/spectrumfog/docs/
+Leaderboard: https://haohaohao-cell.github.io/spectrumfog/docs/leaderboard.html
 
 I would rather fix the model than the copy, so critique of the physics is the
 most useful feedback.
@@ -119,7 +132,7 @@ So the output of a tick isn't damage, it's a set of probabilistic measurements
 (frequency, angle of arrival, time of arrival, power) with misses and false
 targets, which then get fused into a position estimate and a covariance.
 
-What's working today (v0.1, Python + a static web page):
+What's working today (v0.2, Python + a static web page):
 
 - Radar equation, jamming-to-signal ratio, burn-through range, Swerling I
   detection probability. Fictional parameters only.
@@ -127,13 +140,17 @@ What's working today (v0.1, Python + a static web page):
   one self-contained event. Same scenario + seed reproduces byte-identical logs.
   That's the part I care most about: without it, "why did I lose" is unanswerable
   and any AAR is fiction.
-- Two scenarios: a duel (single radar vs a self-screening jammer) and a standoff
-  case where a jammer closes from 60 km to 4 km and the radar's tracking boundary
-  collapses from 20.5 km to 5.3 km. The second one is a 10 s GIF.
+- Six scenarios: a duel (single radar vs a self-screening jammer); a standoff case
+  where a jammer closes from 60 km to 4 km and the radar's tracking boundary
+  collapses from 20.5 km to 5.3 km (this one is the 10 s GIF); a radar + comms
+  link + two-band jamming case where the link availability drops to 31%; a
+  three-emitter case with a 5e-3 per-scan false alarm rate; a case where radar,
+  jammer and target all move; and a relay decoy whose echo is 325x the real
+  target's at 70 km.
 
-What I deliberately left out: track state machines (M-of-N), multi-emitter
-fusion, terrain. Those are the next milestones, and I'd rather ship a small
-honest core than a big vague one.
+What I deliberately left out: track state machines (M-of-N), treating a decoy as
+a *false track* rather than a bright false echo, and terrain. Those are the next
+milestones, and I'd rather ship a small honest core than a big vague one.
 
 The thing I'm least sure about is the observation model: right now a "detection"
 is a single-scan Bernoulli draw at Pd, with no persistence. Real sensors hold
@@ -143,6 +160,8 @@ here handle the gap between "detection" and "track" in their own models.
 Demo (drag the jammer): https://haohaohao-cell.github.io/spectrumfog/
 Code: https://github.com/haohaohao-cell/spectrumfog
 Design notes: https://github.com/haohaohao-cell/spectrumfog/blob/main/docs/design.md
+Docs: https://haohaohao-cell.github.io/spectrumfog/docs/
+Leaderboard: https://haohaohao-cell.github.io/spectrumfog/docs/leaderboard.html
 ```
 
 ---
@@ -238,12 +257,13 @@ Physics write-up: https://github.com/haohaohao-cell/spectrumfog/blob/main/docs/p
    T2 要求"无后端"，又要求"同一份物理"。解法是 Python 预编译查表，
    浏览器只插值。代价是数据包 126 KB、误差几 %；收益是网页和 CLI 的数不可能对不上。
 
-7. **我刻意没做的六件事**
-   真实装备库、多径地形、欺骗干扰、航迹状态机、3D、联网。
+7. **我刻意没做的五件事**
+   真实装备库、多径地形、假航迹关联、航迹状态机、3D 与联网。
+   （诱饵已经做了，但它只到"假回波"——没有让雷达锁上一条假航迹。）
    附上 `docs/physics.md` §7 的缺口清单链接。
 
 8. **结尾**
-   仓库 + 在线试用 + 一句话邀请："如果你想拿它做课程实验，或者在找 T3b 的论文合作，欢迎聊。"
+   仓库 + 文档 + 在线试用 + 一句话邀请："如果你想拿它做课程实验、或者需要一个能逐行审的对比基线，欢迎聊。"
 
 **开头三段（可直接用）**
 
@@ -277,7 +297,7 @@ Physics write-up: https://github.com/haohaohao-cell/spectrumfog/blob/main/docs/p
 几个关键设计：
 · 物理只有一份（Python），网页只做查表插值，所以网页和命令行的数字不会对不上
 · 确定性 replay：同一想定 + 同一 seed，日志逐字节一致
-· 明确不做：真实装备参数、多径地形、欺骗干扰
+· 明确不做：真实装备参数、多径地形、假航迹（诱饵只做到假回波）
 
 仓库：github.com/haohaohao-cell/spectrumfog
 在线试用（拖动干扰机）：haohaohao-cell.github.io/spectrumfog
@@ -326,7 +346,10 @@ Physics write-up: https://github.com/haohaohao-cell/spectrumfog/blob/main/docs/p
 | 3.24 km | J/S = 1 的烧穿距离（同一组参数） |
 | 0.75 km | 干扰下 Pd = 0.5 的距离——比烧穿半径小 4 倍 |
 | 85.6 | 30 km 处目标受到的 J/S（19.3 dB） |
-| 106 + 16 | Python / 前端单测数 |
+| 6 | 想定数量（含通信链路、多辐射源、诱饵） |
+| 325× | 诱饵回波 / 70 km 处真目标回波 |
+| 45.76 | 三个 baseline 在排行榜上的得分 |
+| 182 + 16 | Python / 前端单测数 |
 | 0 | 后端进程数 |
 
 **图片素材**
@@ -349,6 +372,7 @@ Physics write-up: https://github.com/haohaohao-cell/spectrumfog/blob/main/docs/p
 - [ ] 缺口（无处理增益、无多径、无航迹）在正文里主动交代，不是等人问
 - [ ] 许可证与引用信息在仓库可见（Apache-2.0 + CC BY 4.0 + CITATION.cff）
 - [ ] GitHub 仓库的 Social preview 已上传
+- [x] 数字与链接按 v0.2.0 核对（2026-10-27：6 想定 / 182+16 测试 / 三处线上地址）
 
 ---
 
@@ -357,10 +381,10 @@ Physics write-up: https://github.com/haohaohao-cell/spectrumfog/blob/main/docs/p
 | 会被问 | 怎么答（别防御，给数） |
 |---|---|
 | "这不是军事软件吗？" | 定位是 educational / research simulation；参数全虚构，不含任何真实装备数据；Apache-2.0 公开可审。 |
-| "1 W 干扰机就能压制 150 kW 雷达？假的吧" | 对，看着不合理，因为 v1 没有处理增益。落进 2 MHz 的只有 20 mW，而 12 km 处回波是 -67 dBm。缺口写在 docs/physics.md §7.1，加 20 dB 处理增益的话烧穿距离会涨约 10 倍。 |
+| "1 W 干扰机就能压制 150 kW 雷达？假的吧" | 对，看着不合理，因为 v1 没有处理增益。落进 2 MHz 的只有 20 mW，而 12 km 处回波是 -67 dBm。缺口写在 docs/physics.md §7 第 1 条，加 20 dB 处理增益的话烧穿距离会涨约 10 倍。 |
 | "Pd 公式太粗糙" | 用的 Swerling I 单脉冲闭式，是为了能反解检测距离。它对 SNR 偏钝（Pfa=1e-6 时要 21 dB 才到 0.9），这是选择的代价，不是笔误。 |
 | "为什么不直接调现成的雷达库？" | 这个项目的卖点是"能逐行审的物理"和确定性 replay，引入第三方物理就没法保证了。 |
 | "Python 跑得动吗？" | 热路径是闭式解，600 tick 的想定 1.3 s；向量化，不写逐点循环。 |
-| "有验证吗？" | 106 + 16 项测试；关键一致性有专门断言（J/S=1 时 R=R_bt、同一 seed 字节级相同、接收增益与波长相消）。 |
+| "有验证吗？" | 182 + 16 项测试；关键一致性有专门断言（J/S=1 时 R=R_bt、同一 seed 字节级相同、接收增益与波长相消）。 |
 | "为什么不用 deck.gl / three.js？" | 二维几百个图元，canvas 够了；打包 230 KB / gzip 73 KB。等有上万条轨迹再换。 |
 | "做这个能干嘛？" | 课程实验、算法对比、复盘工具。T3a 在做 replay → 归因报告。 |
