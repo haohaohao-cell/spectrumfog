@@ -25,10 +25,11 @@ import gymnasium as gym
 import numpy as np
 from gymnasium import spaces
 
+from ..bands import in_band
 from ..engine import detect, fusion
 from ..metrics import cep_from_covariance
 from ..model.scenario import Scenario
-from ..physics import radar
+from ..physics import comms, propagation, radar
 
 __all__ = ["SpectrumFogEnv", "POWER_LEVELS", "DIRECTIONS", "decode_action"]
 
@@ -84,6 +85,16 @@ class SpectrumFogEnv(gym.Env):
             else max(1.5 * math.hypot(*self.jammer_platform.pos), 80_000.0)
         )
 
+        # 频段决定"这台干扰机打谁"：同频打雷达，否则找一条它打得到的通信链路
+        self.radar_band_ok = in_band(
+            self.radar_emitter.freq_hz,
+            self.radar_emitter.bw_hz,
+            self.jammer_emitter.freq_hz,
+            self.jammer_emitter.bw_hz,
+        )
+        self.link = None if self.radar_band_ok else self._find_link()
+        self.mode = "link" if self.link is not None else "radar"
+
         self.action_space = spaces.Discrete(_ACTIONS)
         self.observation_space = spaces.Box(
             low=-2.0, high=2.0, shape=(6,), dtype=np.float32
@@ -131,11 +142,17 @@ class SpectrumFogEnv(gym.Env):
         range_jammer = float(np.linalg.norm(self._pos - radar_pos))
 
         pd_value, js_value = self._range_physics(range_target, range_jammer)
+        link_state = self._link_state() if self.mode == "link" else None
         cep = self._sense()
         localized = bool(np.isfinite(cep) and cep <= self.threshold_m)
 
+        if self.mode == "link":
+            effective = link_state is not None and not link_state["available"]
+        else:
+            effective = pd_value < self.pd_threshold
+
         reward = 0.0
-        if pd_value < self.pd_threshold:
+        if effective:
             reward += 1.0
         if localized:
             reward -= 1.0
@@ -152,6 +169,8 @@ class SpectrumFogEnv(gym.Env):
             "js": js_value,
             "range_jammer": range_jammer,
             "power": self._power,
+            "mode": self.mode,
+            "link": link_state,
         }
 
         terminated = self._step_index >= self.max_steps
@@ -181,7 +200,8 @@ class SpectrumFogEnv(gym.Env):
             )
         )
         pj_w = self.params["pj_w"] * self._power
-        if pj_w <= 0.0:
+        # 关机、或这台干扰机根本不在雷达频段内 → 无干扰
+        if pj_w <= 0.0 or not self.radar_band_ok:
             return float(radar.pd_from_powers(self.pfa, pr_w, pn_w)), 0.0
         pj_rx = float(
             radar.jammer_received_power(
@@ -238,6 +258,73 @@ class SpectrumFogEnv(gym.Env):
         if fix is None:
             return float("nan")
         return float(cep_from_covariance(fix.covariance, samples=600)[0])
+
+    def _find_link(self):
+        """找一条这台干扰机"打得到"的通信链路（同频段）。"""
+        from ..model.emitter import CommsEmitter
+
+        for platform in self.scenario.platforms:
+            if platform.id == self.jammer_platform.id:
+                continue
+            for emitter in platform.emitters:
+                if not isinstance(emitter, CommsEmitter):
+                    continue
+                if in_band(
+                    emitter.freq_hz,
+                    emitter.bw_hz,
+                    self.jammer_emitter.freq_hz,
+                    self.jammer_emitter.bw_hz,
+                ):
+                    return (
+                        platform,
+                        emitter,
+                        self.scenario.platform(emitter.to_platform),
+                    )
+        return None
+
+    def _link_state(self) -> dict:
+        """链路当前状态：接收功率、J/S、抗干扰余量、是否可用。"""
+        platform, emitter, receiver = self.link  # type: ignore[misc]
+        t = self._step_index * self.dt
+        tx = np.asarray(platform.position_at(t), dtype=float)
+        rx = np.asarray(receiver.position_at(t), dtype=float)
+        lam = float(radar.wavelength(emitter.freq_hz))
+
+        ps_rx_w = float(
+            propagation.received_power(
+                ptx_w=emitter.ptx_w,
+                gtx=emitter.gain,
+                grx=1.0,
+                freq_hz=emitter.freq_hz,
+                range_m=float(np.linalg.norm(rx - tx)),
+            )
+        )
+        pj_rx_w = 0.0
+        if self._power > 0.0:
+            pj_rx_w = float(
+                radar.jammer_received_power(
+                    pj_w=float(self.jammer_emitter.pj_w) * self._power,
+                    gj=float(self.jammer_emitter.gain),
+                    gr=1.0,
+                    lam=lam,
+                    range_j_m=float(np.linalg.norm(rx - self._pos)),
+                    bw_r_hz=emitter.bw_hz,
+                    bw_j_hz=float(self.jammer_emitter.bw_hz),
+                )
+            )
+        js = pj_rx_w / ps_rx_w if ps_rx_w > 0.0 else 0.0
+        margin_db = (
+            emitter.processing_gain_db
+            + emitter.coding_gain_db
+            - 10.0 * math.log10(max(js, 1e-30))
+        )
+        return {
+            "available": margin_db > 0.0,
+            "js": js,
+            "margin_db": margin_db,
+            "ps_rx_w": ps_rx_w,
+            "pj_rx_w": pj_rx_w,
+        }
 
     def _observation(self) -> np.ndarray:
         x, y = float(self._pos[0]), float(self._pos[1])

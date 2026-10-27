@@ -1,0 +1,94 @@
+# 04_fog — 多辐射源 + 虚假目标（T3b）
+#
+# 用来压测"观测是核心资产"这件事：
+#   * 红方同时有 3 个辐射源（两部噪声干扰机 + 一部雷达），频率相近但不相同；
+#   * 蓝方 3 部 ESM 的单次扫描虚警率从 1e-4 调到 5e-3，制造大量无源量测；
+#   * 融合时必须按辐射源分组，否则会把不同目标解成一条假轨迹。
+#
+# 注意：雷达链路的物理仍然只算"主雷达 vs 主干扰机"（第一部噪声干扰机）。
+# 多辐射源影响的是 ESM 视角与融合，不是雷达方程本身——这是 v1 的已知边界。
+
+meta:
+  name: 04_fog
+  seed: 23
+  dt: 2.0
+  duration: 120
+
+environment:
+  noise_figure_db: 3.0
+  temperature_k: 290
+
+platforms:
+  - id: radar_a
+    side: blue
+    pos: [0, 0]
+    emitters:
+      - kind: radar
+        freq_hz: 3.0e9
+        bw_hz: 4.0e6
+        pt_w: 1.2e5
+        gain_db: 34
+        sigma_m2: 1.5
+        loss_db: 3
+
+  - id: jammer_c1
+    side: red
+    pos: [25000, 5000]
+    emitters:
+      - kind: noise_jammer
+        freq_hz: 3.0e9
+        bw_hz: 1.0e8
+        pj_w: 30.0
+        gain_db: 0
+
+  - id: jammer_c2
+    side: red
+    pos: [40000, 20000]
+    emitters:
+      - kind: noise_jammer
+        freq_hz: 3.0e9
+        bw_hz: 2.0e7
+        pj_w: 8.0
+        gain_db: 3
+
+  # 红方自己的雷达：也要被蓝方 ESM 看见（这是"多辐射源"里最容易漏的一个）
+  - id: radar_c
+    side: red
+    pos: [60000, -10000]
+    emitters:
+      - kind: radar
+        freq_hz: 3.0e9
+        bw_hz: 1.0e6
+        pt_w: 5.0e4
+        gain_db: 30
+        sigma_m2: 2.0
+        loss_db: 2
+
+sensors:
+  # 虚警率 5e-3：120 帧 × 3 部 ≈ 1.8 条虚假量测，足够制造"鬼影"
+  - id: esm_1
+    kind: esm
+    side: blue
+    pos: [0, -25000]
+    noise_figure_db: 12.0
+    bw_hz: 1.0e6
+    pfa_scan: 5.0e-3
+  - id: esm_2
+    kind: esm
+    side: blue
+    pos: [0, 25000]
+    noise_figure_db: 12.0
+    bw_hz: 1.0e6
+    pfa_scan: 5.0e-3
+  - id: esm_3
+    kind: esm
+    side: blue
+    pos: [-25000, 0]
+    noise_figure_db: 12.0
+    bw_hz: 1.0e6
+    pfa_scan: 5.0e-3
+
+objectives:
+  - {type: localize, target: jammer_c1, cep_m: 500}
+  - {type: localize, target: jammer_c2, cep_m: 800}
+  - {type: localize, target: radar_c, cep_m: 600}

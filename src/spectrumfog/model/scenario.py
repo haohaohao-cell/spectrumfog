@@ -229,6 +229,18 @@ class Scenario(BaseModel):
         ]
         if unknown:
             raise ValueError(f"objectives 指向了不存在的平台：{unknown}")
+        # 通信链路的接收端必须存在，且不能指向自己
+        for platform in self.platforms:
+            for emitter in platform.emitters:
+                target = getattr(emitter, "to_platform", None)
+                if target is None:
+                    continue
+                if target not in platform_ids:
+                    raise ValueError(
+                        f"{platform.id} 的 comms 发射机指向了不存在的平台 {target!r}"
+                    )
+                if target == platform.id:
+                    raise ValueError(f"{platform.id} 的 comms 发射机指向了自己")
         return self
 
     # --- 查询 -------------------------------------------------------------

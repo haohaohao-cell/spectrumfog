@@ -108,8 +108,9 @@ spectrumfog/
 ├── scenarios/
 │   ├── 01_duel.yaml        单雷达 vs 单干扰机（自屏蔽，静态）
 │   ├── 02_standoff.yaml    站距干扰 + 移动干扰机（T1 动画想定）
-│   ├── 03_triad.yaml       雷达 + 通信 + 诱饵
-│   └── 04_fog.yaml         多辐射源 + 虚假目标
+│   ├── 03_triad.yaml       雷达 + 通信链路 + 双频段干扰机
+│   ├── 04_fog.yaml         三辐射源 + 虚假目标
+│   └── 05_mobile.yaml       雷达 / 干扰机 / 目标三方机动
 ├── bench/                  T3：baseline 策略 + 评测脚本
 └── tests/
 ```
@@ -339,5 +340,5 @@ T1 一结束就发布（README 换头图 + GIF、仓库公开），不等 T2。
 - [x] T1 2D 动态 + **首次发布**（2026-10-27：`sim --gif` 出 10 s 动画 + 确定性 replay；仓库已公开）
 - [x] T2 Web 交互（2026-10-27：`export-web` 数据包 + Vite/React 交互页 + Pages 上线）
 - [x] T3a AAR 复盘分析（2026-10-27：`spectrumfog aar` 出时间线 + 暴露时长 + 留一法归因 + 单页 HTML）
-- [ ] T3b 平台化（进行中：Gymnasium 环境 + 3 个 baseline + `bench --all` 已通；
-      还差 3 个想定、文档站、公开排行榜）
+- [ ] T3b 平台化（进行中：Gymnasium 环境 + 3 个 baseline + 5 个想定 + `bench --all` 已通；
+      还差文档站与公开排行榜）

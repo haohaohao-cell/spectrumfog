@@ -302,6 +302,11 @@ def _sim(args: argparse.Namespace) -> int:
         f"  单次扫描命中率     {summary['scan_detection_fraction'] * 100:.1f}%"
         "（抽样结果，不等于是否丢失）"
     )
+    if summary.get("link_avail") is not None:
+        print(
+            f"  链路可用率         {summary['link_avail'] * 100:.0f}%"
+            "（J/S 超过处理增益+编码增益即失效）"
+        )
     print()
     print(f"  replay → {replay_path}   （{n_lines} 行，一行一事件）")
 

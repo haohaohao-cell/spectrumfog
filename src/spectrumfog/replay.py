@@ -40,7 +40,7 @@ __all__ = [
     "build_frames",
 ]
 
-EVENT_KINDS = ("meta", "state", "link", "detection", "measurement", "estimate")
+EVENT_KINDS = ("meta", "state", "link", "detection", "measurement", "estimate", "comms")
 
 
 def write_replay(path: str | Path, events: Sequence[Mapping[str, Any]]) -> int:
@@ -99,6 +99,7 @@ class Frame:
     detection: dict[str, Any] | None
     measurements: tuple[dict[str, Any], ...] = ()
     estimates: tuple[dict[str, Any], ...] = ()
+    comms: tuple[dict[str, Any], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -143,6 +144,7 @@ def build_frames(events: Sequence[Mapping[str, Any]]) -> tuple[Frame, ...]:
                 "detection": None,
                 "measurements": [],
                 "estimates": [],
+                "comms": [],
             },
         )
         kind = event["kind"]
@@ -161,6 +163,8 @@ def build_frames(events: Sequence[Mapping[str, Any]]) -> tuple[Frame, ...]:
             bucket["measurements"].append(dict(event))
         elif kind == "estimate":
             bucket["estimates"].append(dict(event))
+        elif kind == "comms":
+            bucket["comms"].append(dict(event))
 
     return tuple(
         Frame(
@@ -171,6 +175,7 @@ def build_frames(events: Sequence[Mapping[str, Any]]) -> tuple[Frame, ...]:
             detection=buckets[t]["detection"],
             measurements=tuple(buckets[t]["measurements"]),
             estimates=tuple(buckets[t]["estimates"]),
+            comms=tuple(buckets[t]["comms"]),
         )
         for t in sorted(buckets)
     )

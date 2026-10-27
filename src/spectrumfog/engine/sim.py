@@ -20,9 +20,11 @@ from typing import Any
 import numpy as np
 
 from .. import metrics
+from ..bands import in_band
+from ..model.emitter import CommsEmitter
 from ..model.platform import Platform
 from ..model.scenario import Scenario
-from ..physics import radar
+from ..physics import comms, propagation, radar
 from . import detect, fusion
 from .clock import Clock
 
@@ -125,6 +127,7 @@ class Simulation:
         detected_series: list[bool] = []
         pd_series: list[float] = []
         jammer_ranges: list[float] = []
+        comms_states: list[bool] = []
 
         for tick in clock:
             positions = {
@@ -144,12 +147,23 @@ class Simulation:
             range_target_m = _distance(radar_pos, target_pos)
             range_jammer_m = _distance(radar_pos, jammer_pos)
 
-            js = float(
-                radar.js_ratio_standoff(
-                    range_m=range_target_m,
-                    jammer_range_m=range_jammer_m,
-                    **params,
+            # 频段不重叠就不构成干扰：多频段想定（03_triad）靠这条区分谁打谁
+            radar_band_ok = in_band(
+                radar_emitter.freq_hz,
+                radar_emitter.bw_hz,
+                jammer_emitter.freq_hz,
+                jammer_emitter.bw_hz,
+            )
+            js = (
+                float(
+                    radar.js_ratio_standoff(
+                        range_m=range_target_m,
+                        jammer_range_m=range_jammer_m,
+                        **params,
+                    )
                 )
+                if radar_band_ok
+                else 0.0
             )
             burn_through_m = float(
                 radar.burn_through_range_standoff(
@@ -167,16 +181,20 @@ class Simulation:
                     loss=params["loss"],
                 )
             )
-            pj_rx_w = float(
-                radar.jammer_received_power(
-                    pj_w=params["pj_w"],
-                    gj=params["gj"],
-                    gr=params["gain"],
-                    lam=params["lam"],
-                    range_j_m=range_jammer_m,
-                    bw_r_hz=params["bw_r_hz"],
-                    bw_j_hz=params["bw_j_hz"],
+            pj_rx_w = (
+                float(
+                    radar.jammer_received_power(
+                        pj_w=params["pj_w"],
+                        gj=params["gj"],
+                        gr=params["gain"],
+                        lam=params["lam"],
+                        range_j_m=range_jammer_m,
+                        bw_r_hz=params["bw_r_hz"],
+                        bw_j_hz=params["bw_j_hz"],
+                    )
                 )
+                if radar_band_ok
+                else 0.0
             )
             pd = float(radar.pd_from_powers(self.pfa, pr_w, pn_w, pj_rx_w))
 
@@ -222,6 +240,23 @@ class Simulation:
             pd_series.append(pd)
             jammer_ranges.append(range_jammer_m)
 
+            # --- 通信链路（T3b）：只读几何 + 链路预算 ---
+            for platform in scenario.platforms:
+                for emitter in platform.emitters:
+                    if not isinstance(emitter, CommsEmitter):
+                        continue
+                    comms_event = self._comms_event(
+                        t_s=tick.t,
+                        platform=platform,
+                        emitter=emitter,
+                        positions=positions,
+                        jammer_pos=positions[jammer_platform.id],
+                        jammer_emitter=jammer_emitter,
+                        params=params,
+                    )
+                    events.append(comms_event)
+                    comms_states.append(bool(comms_event["available"]))
+
             # --- ESM 观测 + 融合（T3a）---
             if scenario.sensors:
                 observations = self._observe_tick(
@@ -241,6 +276,7 @@ class Simulation:
             dt=scenario.meta.dt,
             unjammed_range_m=unjammed_range_m,
             n_fixes=sum(1 for event in events if event["kind"] == "estimate"),
+            comms_states=comms_states,
         )
         return SimulationResult(meta=meta, events=events, summary=summary)
 
@@ -339,6 +375,83 @@ class Simulation:
             )
         return estimates
 
+    def _comms_event(
+        self,
+        *,
+        t_s: float,
+        platform: Platform,
+        emitter: CommsEmitter,
+        positions: dict[str, tuple[float, float]],
+        jammer_pos: tuple[float, float],
+        jammer_emitter,
+        params: dict[str, float],
+    ) -> dict[str, Any]:
+        """一条链路的接收功率 / Eb/N0 / 实际 J/S / 抗干扰余量。"""
+        environment = self.scenario.environment
+        receiver = self.scenario.platform(emitter.to_platform)
+        tx_pos = positions[platform.id]
+        rx_pos = positions[receiver.id]
+        lam = float(radar.wavelength(emitter.freq_hz))
+
+        ps_rx_w = float(
+            propagation.received_power(
+                ptx_w=emitter.ptx_w,
+                gtx=emitter.gain,
+                grx=1.0,  # 接收端按全向处理（与 ESM 同一约定）
+                freq_hz=emitter.freq_hz,
+                range_m=float(np.hypot(rx_pos[0] - tx_pos[0], rx_pos[1] - tx_pos[1])),
+            )
+        )
+        # 频段不重叠的干扰机打不到这条链路
+        band_ok = in_band(
+            emitter.freq_hz, emitter.bw_hz, jammer_emitter.freq_hz, jammer_emitter.bw_hz
+        )
+        pj_rx_w = (
+            float(
+                radar.jammer_received_power(
+                    pj_w=params["pj_w"],
+                    gj=params["gj"],
+                    gr=1.0,
+                    lam=lam,
+                    range_j_m=float(
+                        np.hypot(rx_pos[0] - jammer_pos[0], rx_pos[1] - jammer_pos[1])
+                    ),
+                    bw_r_hz=emitter.bw_hz,
+                    bw_j_hz=params["bw_j_hz"],
+                )
+            )
+            if band_ok
+            else 0.0
+        )
+        js = pj_rx_w / ps_rx_w if ps_rx_w > 0.0 else 0.0
+        noise_psd = float(
+            comms.noise_psd(
+                noise_figure=environment.noise_figure,
+                temperature_k=environment.temperature_k,
+            )
+        )
+        ebn0 = float(comms.ebn0(ps_rx_w, noise_psd, emitter.bit_rate_bps))
+        aj_margin_db = float(
+            emitter.processing_gain_db
+            + emitter.coding_gain_db
+            - 10.0 * np.log10(max(js, 1e-30))
+        )
+        return {
+            "kind": "comms",
+            "t": t_s,
+            "emitter": platform.id,
+            "receiver": receiver.id,
+            "range_m": float(
+                np.hypot(rx_pos[0] - tx_pos[0], rx_pos[1] - tx_pos[1])
+            ),
+            "ps_rx_w": ps_rx_w,
+            "pj_rx_w": pj_rx_w,
+            "js": js,
+            "ebn0": ebn0,
+            "aj_margin_db": aj_margin_db,
+            "available": aj_margin_db > 0.0,
+        }
+
     def _cep_threshold(self) -> float:
         """"被有效定位"的 CEP 门槛 [m]：取想定里第一个 localize 目标，缺省 500 m。"""
         for objective in self.scenario.objectives:
@@ -423,6 +536,7 @@ class Simulation:
         dt: float,
         unjammed_range_m: float,
         n_fixes: int = 0,
+        comms_states: list[bool] | None = None,
     ) -> dict[str, Any]:
         """两种口径分开报，别混：
 
@@ -451,8 +565,14 @@ class Simulation:
             "jammer_range_start_m": jammer_ranges[0] if jammer_ranges else None,
             "jammer_range_end_m": jammer_ranges[-1] if jammer_ranges else None,
             "n_fixes": int(n_fixes),
+            "link_avail": (
+                sum(comms_states) / len(comms_states) if comms_states else None
+            ),
+            "n_comms_samples": len(comms_states or []),
         }
 
 
 def _distance(a: tuple[float, float], b: tuple[float, float]) -> float:
     return float(np.hypot(b[0] - a[0], b[1] - a[1]))
+
+

@@ -1,0 +1,103 @@
+# 03_triad — 雷达 + 通信链路 + 两个不同频段的干扰机（T3b）
+#
+# 规格里这一份原本叫"雷达 + 通信 + 诱饵"。诱饵（欺骗式假目标）还没建模，
+# 所以这里用"两条链路 + 两个频段的干扰机"体现"多目标、多频段"这个要点：
+#   * 3 GHz 干扰机打雷达；
+#   * 300 MHz 干扰机打通信链路；
+#   * 频段不重叠就不构成干扰（engine/sim.py 里有显式的 `_in_band` 判据）。
+#
+# 全部参数虚构。链路质量每 tick 结算：接收功率 → Eb/N0 → 实际 J/S → 抗干扰余量。
+
+meta:
+  name: 03_triad
+  seed: 11
+  dt: 2.0
+  duration: 120
+
+environment:
+  noise_figure_db: 3.0
+  temperature_k: 290
+
+platforms:
+  - id: radar_a
+    side: blue
+    pos: [0, 0]
+    emitters:
+      - kind: radar
+        freq_hz: 3.0e9
+        bw_hz: 2.0e6
+        pt_w: 1.0e5
+        gain_db: 35
+        sigma_m2: 2.0
+        loss_db: 3
+
+  # 通信链路：comms_a 发给 comms_b（同一方）。处理增益 6 dB、无编码增益，
+  # 所以链路能容忍的 J/S 只有 6 dB —— 这是被干扰的门槛。
+  - id: comms_a
+    side: blue
+    pos: [-5000, -8000]
+    emitters:
+      - kind: comms
+        freq_hz: 3.0e8
+        bw_hz: 2.5e4
+        ptx_w: 20.0
+        gain_db: 3
+        bit_rate_bps: 16000
+        to_platform: comms_b
+        processing_gain_db: 6.0
+        coding_gain_db: 0.0
+
+  - id: comms_b
+    side: blue
+    pos: [-20000, 30000]
+    emitters: []
+
+  # 打通信链路：300 MHz、300 W。从 36 km 外一路压到 11 km，
+  # 所以链路可用率会在中途掉到 0——这正是 Link_avail 这个指标存在的意义。
+  - id: jammer_comms
+    side: red
+    pos: [10000, 50000]
+    waypoints:
+      - {t: 0, pos: [10000, 50000]}
+      - {t: 120, pos: [-10000, 34000]}
+    emitters:
+      - kind: noise_jammer
+        freq_hz: 3.0e8
+        bw_hz: 2.0e5
+        pj_w: 300.0
+        gain_db: 3
+
+  # 打雷达：3 GHz、90 W。与通信链路不同频，按 `_in_band` 不会互相影响。
+  - id: jammer_radar
+    side: red
+    pos: [30000, 0]
+    emitters:
+      - kind: noise_jammer
+        freq_hz: 3.0e9
+        bw_hz: 1.0e8
+        pj_w: 90.0
+        gain_db: 0
+
+sensors:
+  - id: esm_1
+    kind: esm
+    side: blue
+    pos: [0, -25000]
+    noise_figure_db: 12.0
+    bw_hz: 1.0e6
+  - id: esm_2
+    kind: esm
+    side: blue
+    pos: [0, 25000]
+    noise_figure_db: 12.0
+    bw_hz: 1.0e6
+  - id: esm_3
+    kind: esm
+    side: blue
+    pos: [-25000, 0]
+    noise_figure_db: 12.0
+    bw_hz: 1.0e6
+
+objectives:
+  - {type: protect_link, target: comms_a}
+  - {type: localize, target: jammer_comms, cep_m: 800}

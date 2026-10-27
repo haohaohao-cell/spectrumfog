@@ -56,8 +56,8 @@ spectrumfog run scenarios/01_duel.yaml             # 静态曲线：烧穿 / Pd�
 | 观测（AOA/TOA/功率测量）+ 融合定位 + 虚假目标 | ✅ T3a |
 | AAR 复盘（时间线 · 暴露时长 · 留一法归因 · HTML 报告） | ✅ T3a |
 | Web 交互（拖动干扰机 → 热力图与曲线） | ✅ 线上已部署 |
-| Gymnasium 环境 + 3 个 baseline + 评测表 | ✅ T3b（想定 2/5、公开榜单待做） |
-| 5 个想定 · 文档站 · 公开排行榜 | ⬜ T3b 后半段 |
+| Gymnasium 环境 + 3 个 baseline + 5 个想定 | ✅ T3b |
+| 文档站 · 公开排行榜 | ⬜ T3b 后半段 |
 
 ## 两个反直觉的结果（免得你以为算错了）
 
@@ -129,21 +129,32 @@ spectrumfog aar out/01_duel.jsonl                    # 出 out/01_duel_aar.html
 
 ## Baseline 评测（T3b）
 
-`spectrumfog bench --all` 把想定变成 Gymnasium 决策问题，让三个策略各跑几局：
+`spectrumfog bench --all` 把五份想定变成 Gymnasium 决策问题，让三个策略各跑几局：
 
 ```
 scenario       policy             reward  jammed  exposed  Pd mean   J/S mean     首告警[s]
-01_duel        always-jam     289.3± 18    100%      50%    0.000      85.63          2
-01_duel        random         221.3± 11     67%      29%    0.314      59.61          6
-01_duel        stealth          3.2±  2      4%       3%    0.917      53.28         46
-02_standoff    stealth          4.5±  3      7%       3%    0.948       0.01         94
-02_standoff    random          -1.5±  0      0%       0%    0.957       0.00        206
-02_standoff    always-jam      -3.1±  0      0%       1%    0.919       0.01        127
+01_duel        always-jam     281.0± 16    100%      51%    0.000      85.63          2
+01_duel        random         223.9± 13     68%      30%    0.305      54.71          5
+01_duel        stealth          3.5±  3      4%       3%    0.917      53.66         46
+02_standoff    stealth          3.8±  3      7%       3%    0.952       0.01         95
+02_standoff    random          -1.6±  1      0%       0%    0.957       0.00        206
+02_standoff    always-jam      -3.4±  0      0%       1%    0.919       0.01        127
+03_triad       stealth          0.0±  0      0%       0%    0.861       0.00          —
+03_triad       random         -37.5±  4      0%      62%    0.861       0.00          4
+03_triad       always-jam     -61.2±  0      0%     100%    0.861       0.00          2
+04_fog         always-jam      49.3±  4    100%      16%    0.000      43.25         11
+04_fog         random          35.0±  3     62%       3%    0.351      22.70         51
+04_fog         stealth          1.9±  2      7%       3%    0.875      55.13         48
+05_mobile      always-jam      81.7±  3    100%       7%    0.002       1.52         25
+05_mobile      random          51.2±  3     64%       6%    0.362       0.73         37
+05_mobile      stealth          0.4±  0      4%       3%    0.952       1.24         88
 ```
 
 读法：90 W 的 `01_duel` 里蛮干就能赢（30 km 处 Pd 已压到 1e-6，靠近纯属浪费）；
 只有 1 W 的 `02_standoff` 里必须贴脸，但贴脸就被三站交汇——`stealth` 打一下就跑，
-成功率 7%。**没有一个策略通吃**，这正是要 benchmark 而不是调一个 demo 的原因。
+成功率 7%。`03_triad` 是链路场景，三个雷达思路的 baseline 谁也不会往接收机那边靠，
+所以全是负分（J/S 列为 0 是因为它的干扰机与雷达不同频）。**没有一个策略通吃**，
+这正是要 benchmark 而不是调一个 demo 的原因。
 
 环境契约（观测 6 维、动作 15 个、奖励设计、部分可观测落在哪）见 [docs/bench.md](docs/bench.md)。
 三个 baseline 只吃观测，不读环境私有状态。
@@ -167,7 +178,10 @@ viz/static/
 scenarios/
   01_duel.yaml        T0：单雷达 vs 单干扰机 + 三部 ESM（自屏蔽，静态）
   02_standoff.yaml    T1：站距干扰 + 移动干扰机 + 待机目标（动画）
-tests/              136 项：物理、想定、时钟、回放、确定性、动画、融合、AAR、Web 数据包、CLI
+  03_triad.yaml       T3b：雷达 + 通信链路 + 双频段干扰机（链路可用率）
+  04_fog.yaml         T3b：三个辐射源 + 5e-3 虚警率（多目标 + 虚假目标）
+  05_mobile.yaml      T3b：雷达 / 干扰机 / 目标三方同时机动
+tests/              165 项：物理、想定、时钟、回放、确定性、动画、融合、AAR、通信链路、Gym、Web 数据包、CLI
 viz/web/src/        16 项前端单测（查表解码、插值、首屏渲染）
 docs/               physics.md（公式与假设）· design.md（建模取舍）· scenario.md（YAML schema）
                     metrics.md（指标定义）· web.md（前端数据包）· bench.md（Gym 与评测）

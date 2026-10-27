@@ -20,7 +20,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from ..units import db_to_linear
 
-__all__ = ["RadarEmitter", "NoiseJammerEmitter", "Emitter"]
+__all__ = ["RadarEmitter", "NoiseJammerEmitter", "CommsEmitter", "Emitter"]
 
 
 class _EmitterBase(BaseModel):
@@ -97,7 +97,39 @@ class NoiseJammerEmitter(_EmitterBase):
         return 10.0 * math.log10(self.gain)
 
 
+class CommsEmitter(_EmitterBase):
+    """通信链路的一端（T3b）。
+
+    ``to_platform`` 指向接收方平台；链路质量每个 tick 由 ``physics.comms`` 结算：
+    接收功率 → Eb/N0 → 实际 J/S → 抗干扰余量。``processing_gain_db`` 与
+    ``coding_gain_db`` 是想定给的（虚构值），用途就是"链路能容忍多少 J/S"。
+    """
+
+    kind: Literal["comms"]
+    ptx_w: float = Field(gt=0, description="发射功率 [W]")
+    gain: float = Field(
+        gt=0,
+        validation_alias="gain_db",
+        serialization_alias="gain_db",
+        description="发射天线增益 [线性]，YAML 里写 gain_db",
+    )
+    bit_rate_bps: float = Field(gt=0, description="信息速率 [bit/s]")
+    to_platform: str = Field(min_length=1, description="接收方平台 id")
+    processing_gain_db: float = Field(default=0.0, description="处理增益 [dB]")
+    coding_gain_db: float = Field(default=0.0, description="编码增益 [dB]")
+
+    @field_validator("gain", mode="before")
+    @classmethod
+    def _gain_from_db(cls, value: object) -> float:
+        return float(db_to_linear(value))
+
+    @property
+    def gain_db(self) -> float:
+        return 10.0 * math.log10(self.gain)
+
+
 #: 想定 emitters 列表的元素类型，按 ``kind`` 字段分派。
 Emitter = Annotated[
-    Union[RadarEmitter, NoiseJammerEmitter], Field(discriminator="kind")
+    Union[RadarEmitter, NoiseJammerEmitter, CommsEmitter],
+    Field(discriminator="kind"),
 ]

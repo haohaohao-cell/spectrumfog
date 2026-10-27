@@ -105,6 +105,25 @@ waypoints:
 | `sigma_m2` | float > 0 | 必填 | 目标 RCS [m²]（虚构值） |
 | `loss_db` | float ≥ 0 | 0 | 系统损耗 [dB] |
 
+### emitters[] — `kind: comms`（T3b）
+
+通信链路的一端；链路质量每 tick 结算（接收功率 → Eb/N0 → 实际 J/S → 抗干扰余量）。
+
+| 字段 | 类型 | 默认 | 说明 |
+|---|---|---|---|
+| `freq_hz` | float > 0 | 必填 | 载频 [Hz] |
+| `bw_hz` | float > 0 | 必填 | 信道带宽 [Hz] |
+| `ptx_w` | float > 0 | 必填 | 发射功率 [W] |
+| `gain_db` | float | 必填 | 发射天线增益 [dBi] |
+| `bit_rate_bps` | float > 0 | 必填 | 信息速率 [bit/s] |
+| `to_platform` | str | 必填 | 接收方平台 id（必须存在，不能是自己） |
+| `processing_gain_db` | float | 0 | 处理增益 [dB]，决定链路能容忍多少 J/S |
+| `coding_gain_db` | float | 0 | 编码增益 [dB] |
+
+**频段判据**：v1 用矩形谱——两个发射的中心频率差不超过半带宽之和，才算同频、
+才能互相干扰（`spectrumfog.bands.in_band`）。所以 03_triad 里 300 MHz 的干扰机
+打不到 3 GHz 的雷达，反之亦然。
+
 ### emitters[] — `kind: noise_jammer`
 
 | 字段 | 类型 | 默认 | 说明 |

@@ -1,0 +1,83 @@
+# 05_mobile — 三方都在动（T3b）
+#
+# 前面几份想定里，动的是干扰机（02）或者没人动（01/03/04）。
+# 这一份让雷达、干扰机、目标同时机动，用来验证：
+#   * 几何随时间变化时，烧穿半径与定位精度都在动；
+#   * replay 里的位置来自航路点插值，AAR 仍然能对上真值。
+#
+# 全部参数虚构。
+
+meta:
+  name: 05_mobile
+  seed: 31
+  dt: 2.0
+  duration: 180
+
+environment:
+  noise_figure_db: 3.0
+  temperature_k: 290
+
+platforms:
+  # 雷达边打边挪
+  - id: radar_a
+    side: blue
+    pos: [0, 0]
+    waypoints:
+      - {t: 0, pos: [0, 0]}
+      - {t: 180, pos: [15000, 8000]}
+    emitters:
+      - kind: radar
+        freq_hz: 3.0e9
+        bw_hz: 2.0e6
+        pt_w: 1.5e5
+        gain_db: 35
+        sigma_m2: 1.0
+        loss_db: 3
+
+  # 干扰机从 50 km 外斜插进来
+  - id: jammer_b
+    side: red
+    pos: [50000, 10000]
+    waypoints:
+      - {t: 0, pos: [50000, 10000]}
+      - {t: 90, pos: [30000, 6000]}
+      - {t: 180, pos: [12000, 2000]}
+    emitters:
+      - kind: noise_jammer
+        freq_hz: 3.0e9
+        bw_hz: 1.0e8
+        pj_w: 20.0
+        gain_db: 0
+
+  # 目标向雷达方向切进
+  - id: target_c
+    side: red
+    pos: [22000, -16000]
+    waypoints:
+      - {t: 0, pos: [22000, -16000]}
+      - {t: 180, pos: [9000, -6000]}
+    emitters: []
+
+sensors:
+  - id: esm_1
+    kind: esm
+    side: blue
+    pos: [0, -25000]
+    noise_figure_db: 8.0
+    bw_hz: 1.0e6
+  - id: esm_2
+    kind: esm
+    side: blue
+    pos: [0, 25000]
+    noise_figure_db: 8.0
+    bw_hz: 1.0e6
+  - id: esm_3
+    kind: esm
+    side: blue
+    pos: [-25000, 0]
+    noise_figure_db: 8.0
+    bw_hz: 1.0e6
+
+objectives:
+  - {type: detect, target: target_c}
+  - {type: localize, target: jammer_b, cep_m: 500}
