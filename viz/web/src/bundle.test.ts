@@ -139,20 +139,30 @@ describe("ringAt", () => {
 });
 
 describe("mapExtent", () => {
-  it("包住所有平台与最大环，并留出边距", () => {
-    const bundle = {
-      radar: { pos_m: [0, 0] },
-      jammer: { pos_m: [60_000, 0] },
-      target: { pos_m: [9_830, 6_880] },
-      rings: {
-        jammer_range_m: [100, 1e6],
-        detection_m: [800, 50_000],
-        burn_through_m: [1_700, 175_000],
-      },
-    } as unknown as Bundle;
+  const bundle = {
+    radar: { pos_m: [0, 0] },
+    jammer: { pos_m: [60_000, 0] },
+    target: { pos_m: [9_830, 6_880] },
+    rings: {
+      jammer_range_m: [1_000, 10_000, 100_000],
+      detection_m: [1_000, 5_000, 20_000],
+      burn_through_m: [2_000, 8_000, 30_000],
+    },
+  } as unknown as Bundle;
 
-    const extent = mapExtent(bundle);
-    expect(extent).toBeGreaterThan(175_000);
-    expect(extent).toBeCloseTo(175_000 * 1.12, 3);
+  it("按初始干扰机位置取环，而不是整条曲线的最大值", () => {
+    // rj = 60 km → 环在 20 km 与 30 km 之间插值，远小于 100 km 那一端的最大值
+    const extent = mapExtent(bundle, 60_000);
+    expect(extent).toBeGreaterThan(60_000);
+    expect(extent).toBeLessThan(80_000);
+  });
+
+  it("平台在很远时仍要包住平台", () => {
+    const far = {
+      ...bundle,
+      jammer: { pos_m: [200_000, 0] },
+    } as unknown as Bundle;
+    const extent = mapExtent(far, 200_000);
+    expect(extent).toBeGreaterThan(200_000);
   });
 });

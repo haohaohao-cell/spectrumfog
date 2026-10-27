@@ -72,8 +72,8 @@ main {
 .range-rings circle {
   fill: none;
   stroke: #ffffff;
-  stroke-opacity: 0.55;
-  stroke-dasharray: 2 6;
+  stroke-opacity: 0.32;
+  stroke-dasharray: 2 7;
   stroke-width: 1;
 }
 
@@ -82,16 +82,30 @@ main {
   pointer-events: none;
 }
 
+.ring.detection-halo {
+  stroke: #ffffff;
+  stroke-width: 5;
+  stroke-opacity: 0.8;
+}
+
 .ring.detection {
   stroke: var(--primary);
   stroke-width: 2;
   fill: rgba(47, 111, 191, 0.06);
 }
 
+.ring.burn-halo {
+  stroke: #ffffff;
+  stroke-width: 4;
+  stroke-opacity: 0.8;
+  stroke-dasharray: 4 4;
+}
+
+/* J/S = 1 的环用深灰而不是红：整片红色背景上红色环等于没画 */
 .ring.burn {
-  stroke: var(--jam);
-  stroke-width: 1.1;
-  stroke-dasharray: 3 4;
+  stroke: #37414d;
+  stroke-width: 1.5;
+  stroke-dasharray: 4 4;
 }
 
 .link {
@@ -133,8 +147,9 @@ svg text {
 
 .scale-label {
   font-size: 11px;
-  fill: var(--muted);
-  stroke: none;
+  fill: #ffffff;
+  stroke: rgba(0, 0, 0, 0.35);
+  stroke-width: 3px;
 }
 
 aside {

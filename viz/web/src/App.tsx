@@ -89,7 +89,17 @@ export function Scene({ bundle, jammer, onJammer }: SceneProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [dragging, setDragging] = useState(false);
 
-  const extent = useMemo(() => mapExtent(bundle), [bundle]);
+  const extent = useMemo(
+    () =>
+      mapExtent(
+        bundle,
+        Math.hypot(
+          bundle.jammer.pos_m[0] - bundle.radar.pos_m[0],
+          bundle.jammer.pos_m[1] - bundle.radar.pos_m[1],
+        ),
+      ),
+    [bundle],
+  );
   const scale = VIEW / (2 * extent);
 
   const rtGrid = useMemo(
@@ -236,10 +246,22 @@ export function Scene({ bundle, jammer, onJammer }: SceneProps) {
             </g>
 
             <circle
+              className="ring detection-halo"
+              cx={radarX}
+              cy={radarY}
+              r={Math.max(0.5, rings.detection * scale)}
+            />
+            <circle
               className="ring detection"
               cx={radarX}
               cy={radarY}
               r={Math.max(0.5, rings.detection * scale)}
+            />
+            <circle
+              className="ring burn-halo"
+              cx={radarX}
+              cy={radarY}
+              r={Math.max(0.5, rings.burnThrough * scale)}
             />
             <circle
               className="ring burn"
@@ -258,7 +280,13 @@ export function Scene({ bundle, jammer, onJammer }: SceneProps) {
 
             <g className="jammer" transform={`translate(${jammerX} ${jammerY})`}>
               <rect x={-7} y={-7} width={14} height={14} rx={2} />
-              <text x={12} y={4}>jammer</text>
+              <text
+                x={jammerX > VIEW * 0.72 ? -12 : 12}
+                y={4}
+                textAnchor={jammerX > VIEW * 0.72 ? "end" : "start"}
+              >
+                jammer
+              </text>
             </g>
 
             <g className="radar" transform={`translate(${radarX} ${radarY})`}>
@@ -390,8 +418,10 @@ function Chart({
   for (let index = 0; index < values.length; index += 1) {
     const value = values[index];
     if (!Number.isFinite(value)) continue;
+    // log 轴：低于可视下限的点直接跳过，不要贴在图底装成"平线"
+    if (logY && value < yLogLo) continue;
     points.push(
-      `${index === 0 ? "M" : "L"}${xAt(xs[index]).toFixed(1)},${yAt(value).toFixed(1)}`,
+      `${points.length === 0 ? "M" : "L"}${xAt(xs[index]).toFixed(1)},${yAt(value).toFixed(1)}`,
     );
   }
 

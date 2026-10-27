@@ -63,6 +63,11 @@ npm run build                                 # dist/ 纯静态，可丢 GitHub 
 
 数据包格式与"为什么前端不算物理"写在 [docs/web.md](docs/web.md)。
 
+![Web 交互界面](docs/images/web_explorer.png)
+
+*初始状态：干扰机在 60 km，12 km 处的目标仍被跟踪（Pd 0.92），跟踪边界 20.5 km。
+把红色方块往雷达方向拖，边界和蓝色区域会一起收缩。*
+
 ## 怎么读这份代码
 
 ```

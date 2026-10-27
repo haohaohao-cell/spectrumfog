@@ -163,16 +163,18 @@ export function ringAt(rings: RingSeries, rangeJammer: number): {
   };
 }
 
-/** 地图半宽：包住两个平台与最大的一圈环，固定下来避免拖动时画面跳动。 */
-export function mapExtent(bundle: Bundle): number {
+/**
+ * 地图半宽：包住所有平台、以及**当前（初始）干扰机位置**下的两个环，留 12% 边距。
+ *
+ * 不能用 rings 里的最大环：那是一整条曲线（干扰机从 100 m 到 1000 km 都在里面），
+ * 取最大值会把画面撑到 175 km，整个交互区被压成一个点。
+ */
+export function mapExtent(bundle: Bundle, rangeJammer: number): number {
   const points = [bundle.radar.pos_m, bundle.jammer.pos_m, bundle.target.pos_m];
   let reach = 0;
   for (const [x, y] of points) {
     reach = Math.max(reach, Math.hypot(x, y));
   }
-  const widestRing = Math.max(
-    ...bundle.rings.burn_through_m,
-    ...bundle.rings.detection_m,
-  );
-  return Math.max(reach, widestRing) * 1.12;
+  const rings = ringAt(bundle.rings, rangeJammer);
+  return Math.max(reach, rings.detection, rings.burnThrough) * 1.12;
 }

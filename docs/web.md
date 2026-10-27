@@ -107,15 +107,26 @@ npm test
 已验证：
 
 * `npm run build` 通过（tsc 类型检查 + vite 打包，JS 230 KB / gzip 73 KB，无 WebGL 依赖）；
-* 15 项前端单测通过：解码、log 遍历、双线性插值、环插值、越界夹取、
+* 16 项前端单测通过：解码、log 遍历、双线性插值、环插值、越界夹取、
   用真实数据包做首屏 SSR 渲染（TRACKING / JAMMED 两种状态）；
-* 静态产物经 `vite preview` 实测：`index.html`、`data.json`、JS/CSS 均 200。
+* 静态产物经 `vite preview` 实测：`index.html`、`data.json`、JS/CSS 均 200；
+* **headless Chrome 截图**（`docs/images/web_explorer.png`）：初始 60 km 处为 TRACKING，
+  干扰机贴到 15 km 时切换为 JAMMED、边界从 20.5 km 缩到 10.4 km、Pd 从 0.92 掉到 0.31。
 
-**未验证**（本机没有浏览器，只能靠你点一下）：
+**未验证**（本机没有交互式浏览器，只能靠你点一下）：
 
 * 拖动的手感与帧率。若明显卡顿，先把 `App.tsx` 里的 `HEAT` 从 220 降到 160；
 * 地图与曲线在高 DPI 屏上的清晰度；
 * 移动端触摸拖动。
+
+截图命令（无浏览器环境也能复现）：
+
+```bash
+npm run build && npm run preview -- --port 4321
+"C:\Program Files\Google\Chrome\Application\chrome.exe" \
+  --headless=new --disable-gpu --window-size=1200,860 \
+  --virtual-time-budget=8000 --screenshot=shot.png http://localhost:4321/
+```
 
 ## 为什么没用 deck.gl
 
