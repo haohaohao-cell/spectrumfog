@@ -250,7 +250,7 @@ objectives:
 - J/S=1 时 R 与解析解误差 < 1%
 - 至少一张图可以直接当 README 头图
 
-### T1 — 2D 动态 + 首次发布（+1–2 天）
+### T1 — 2D 动态 + 首次发布（+1–2 天，已完成）
 
 产出：俯视动画，干扰机移动 → 烧穿半径收缩 → 雷达失效。
 
@@ -259,13 +259,13 @@ objectives:
 **🚩 发布闸门：T1 一结束就公开仓库、发 README、发渠道，不等 T2。**
 这是"门面"真正的价值——不是多一个独立项目，是**早一次发布**。
 
-### T2 — Web 交互（+5–8 天）
+### T2 — Web 交互（+5–8 天，已完成）
 
 产出：Vite + React + deck.gl，GitHub Pages 静态部署。
 
 **验收**：打开网页可拖动干扰机，热力图与曲线 < 100ms 更新；无后端。
 
-### T3a — AAR 复盘分析（+3–4 天）
+### T3a — AAR 复盘分析（+3–4 天，已完成）
 
 产出：`replay.jsonl` → 关键事件时间线、暴露时刻、定位误差归因、单页 HTML 报告。
 
@@ -273,7 +273,7 @@ objectives:
 
 **为什么排在 T3b 前面**：没有归因的排行榜只是一个分数列表；有了 AAR，它才是训练工具。顺序不能反。
 
-### T3b — 平台化（+4–5 周，**可选分支**）
+### T3b — 平台化（+4–5 周，**可选分支**，已完成）
 
 产出：Gymnasium 接口、3 个 baseline 策略、评测脚本、排行榜、5 个想定、文档站。
 
@@ -322,13 +322,14 @@ star 主要来自发布，不是来自代码量。
 ## 13. 下一个对话的开场指令（直接复制粘贴）
 
 ```
-读 PROJECT.md，T0 已完成，我们从 T1 开始。
-先只做三件事：
-1. engine/clock.py（固定步长）+ engine/sim.py（主循环）+ replay.py（JSONL，一行一事件、可独立解析）
-2. 让干扰机动起来（移动字段随 T1 加进 schema），引擎逐 tick 结算 J/S 与 Pd
-3. viz/static/animate.py：俯视动画 —— 干扰机移动 → 烧穿半径收缩 → 雷达失效，导出 GIF/MP4
-验收：10 秒片段不需要旁白就能看懂；同一 seed 的 replay 逐帧复现。
-T1 一结束就发布（README 换头图 + GIF、仓库公开），不等 T2。
+读 PROJECT.md。T0–T3b 已全部完成，项目处于"可发布、可扩展"状态。
+先跑一遍确认没坏：
+1. python -m pytest -q                 （应 182 passed）
+2. spectrumfog bench --suite scenarios/suite_v1.yaml   （应 18 行，baselines 得分约 45.8）
+3. python tools/build_docs.py --check   （文档站产物应与源码一致）
+
+接下来按 §11 做渠道投放（文案在 docs/launch.md），
+或从 §3 的非目标清单之外挑新方向（多智能体、假航迹关联、Gym 向量化）。
 ```
 
 ---
@@ -342,3 +343,15 @@ T1 一结束就发布（README 换头图 + GIF、仓库公开），不等 T2。
 - [x] T2 Web 交互（2026-10-27：`export-web` 数据包 + Vite/React 交互页 + Pages 上线）
 - [x] T3a AAR 复盘分析（2026-10-27：`spectrumfog aar` 出时间线 + 暴露时长 + 留一法归因 + 单页 HTML）
 - [x] T3b 平台化（2026-10-27：Gymnasium 环境 + 3 个 baseline + 6 个想定 + 文档站 + 提交物校验 + 排行榜）
+
+### 交付索引
+
+| 东西 | 在哪 |
+|---|---|
+| 交互演示（拖干扰机） | <https://haohaohao-cell.github.io/spectrumfog/> |
+| 文档站（9 页） | <https://haohaohao-cell.github.io/spectrumfog/docs/> |
+| 排行榜 | <https://haohaohao-cell.github.io/spectrumfog/docs/leaderboard.html> |
+| 仓库 / 发布 | <https://github.com/haohaohao-cell/spectrumfog> · v0.1.0 |
+| 想定集合（排行榜基准） | `scenarios/suite_v1.yaml`（6 想定 × 5 种子 × 3 策略） |
+| 测试 | 182 项 Python + 16 项前端，CI 全绿 |
+| 发布文案 | `docs/launch.md`（五个渠道） |

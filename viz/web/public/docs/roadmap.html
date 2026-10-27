@@ -362,19 +362,19 @@ objectives:
 - <code>spectrumfog run scenarios/01_duel.yaml</code> 一条命令出三张图（烧穿曲线、Pd–距离、J/S–距离）
 - J/S=1 时 R 与解析解误差 &lt; 1%
 - 至少一张图可以直接当 README 头图</p>
-<h3 id="t1-2d-12">T1 — 2D 动态 + 首次发布（+1–2 天）</h3>
+<h3 id="t1-2d-12">T1 — 2D 动态 + 首次发布（+1–2 天，已完成）</h3>
 <p>产出：俯视动画，干扰机移动 → 烧穿半径收缩 → 雷达失效。</p>
 <p><strong>验收</strong>：导出一段 10 秒 GIF/MP4，不需要旁白就能看懂。</p>
 <p><strong>🚩 发布闸门：T1 一结束就公开仓库、发 README、发渠道，不等 T2。</strong>
 这是"门面"真正的价值——不是多一个独立项目，是<strong>早一次发布</strong>。</p>
-<h3 id="t2-web-58">T2 — Web 交互（+5–8 天）</h3>
+<h3 id="t2-web-58">T2 — Web 交互（+5–8 天，已完成）</h3>
 <p>产出：Vite + React + deck.gl，GitHub Pages 静态部署。</p>
 <p><strong>验收</strong>：打开网页可拖动干扰机，热力图与曲线 &lt; 100ms 更新；无后端。</p>
-<h3 id="t3a-aar-34">T3a — AAR 复盘分析（+3–4 天）</h3>
+<h3 id="t3a-aar-34">T3a — AAR 复盘分析（+3–4 天，已完成）</h3>
 <p>产出：<code>replay.jsonl</code> → 关键事件时间线、暴露时刻、定位误差归因、单页 HTML 报告。</p>
 <p><strong>验收</strong>：对 <code>01_duel</code> 自动生成"你的辐射源在第 12 秒被定位，原因是 X"。</p>
 <p><strong>为什么排在 T3b 前面</strong>：没有归因的排行榜只是一个分数列表；有了 AAR，它才是训练工具。顺序不能反。</p>
-<h3 id="t3b-45">T3b — 平台化（+4–5 周，<strong>可选分支</strong>）</h3>
+<h3 id="t3b-45">T3b — 平台化（+4–5 周，<strong>可选分支</strong>，已完成）</h3>
 <p>产出：Gymnasium 接口、3 个 baseline 策略、评测脚本、排行榜、5 个想定、文档站。</p>
 <p><strong>验收</strong>：<code>pip install -e . &amp;&amp; spectrumfog bench --all</code> 三条命令跑完，产出可比表格。</p>
 <p><strong>分支决策点</strong>：若不打算写论文 / 进实验室，<strong>停在这里即可</strong>——T0–T3a 完成时项目已经完整。</p>
@@ -407,13 +407,14 @@ objectives:
 </ul>
 <hr>
 <h2 id="13">13. 下一个对话的开场指令（直接复制粘贴）</h2>
-<pre><code>读 PROJECT.md，T0 已完成，我们从 T1 开始。
-先只做三件事：
-1. engine/clock.py（固定步长）+ engine/sim.py（主循环）+ replay.py（JSONL，一行一事件、可独立解析）
-2. 让干扰机动起来（移动字段随 T1 加进 schema），引擎逐 tick 结算 J/S 与 Pd
-3. viz/static/animate.py：俯视动画 —— 干扰机移动 → 烧穿半径收缩 → 雷达失效，导出 GIF/MP4
-验收：10 秒片段不需要旁白就能看懂；同一 seed 的 replay 逐帧复现。
-T1 一结束就发布（README 换头图 + GIF、仓库公开），不等 T2。
+<pre><code>读 PROJECT.md。T0–T3b 已全部完成，项目处于&quot;可发布、可扩展&quot;状态。
+先跑一遍确认没坏：
+1. python -m pytest -q                 （应 182 passed）
+2. spectrumfog bench --suite scenarios/suite_v1.yaml   （应 18 行，baselines 得分约 45.8）
+3. python tools/build_docs.py --check   （文档站产物应与源码一致）
+
+接下来按 §11 做渠道投放（文案在 docs/launch.md），
+或从 §3 的非目标清单之外挑新方向（多智能体、假航迹关联、Gym 向量化）。
 </code></pre>
 <hr>
 <h2 id="14">14. 当前状态</h2>
@@ -426,6 +427,45 @@ T1 一结束就发布（README 换头图 + GIF、仓库公开），不等 T2。
 <li>[x] T3a AAR 复盘分析（2026-10-27：<code>spectrumfog aar</code> 出时间线 + 暴露时长 + 留一法归因 + 单页 HTML）</li>
 <li>[x] T3b 平台化（2026-10-27：Gymnasium 环境 + 3 个 baseline + 6 个想定 + 文档站 + 提交物校验 + 排行榜）</li>
 </ul>
+<h3 id="_3">交付索引</h3>
+<table>
+<thead>
+<tr>
+<th>东西</th>
+<th>在哪</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>交互演示（拖干扰机）</td>
+<td><a href="https://haohaohao-cell.github.io/spectrumfog/">https://haohaohao-cell.github.io/spectrumfog/</a></td>
+</tr>
+<tr>
+<td>文档站（9 页）</td>
+<td><a href="https://haohaohao-cell.github.io/spectrumfog/docs/">https://haohaohao-cell.github.io/spectrumfog/docs/</a></td>
+</tr>
+<tr>
+<td>排行榜</td>
+<td><a href="https://haohaohao-cell.github.io/spectrumfog/docs/leaderboard.html">https://haohaohao-cell.github.io/spectrumfog/docs/leaderboard.html</a></td>
+</tr>
+<tr>
+<td>仓库 / 发布</td>
+<td><a href="https://github.com/haohaohao-cell/spectrumfog">https://github.com/haohaohao-cell/spectrumfog</a> · v0.1.0</td>
+</tr>
+<tr>
+<td>想定集合（排行榜基准）</td>
+<td><code>scenarios/suite_v1.yaml</code>（6 想定 × 5 种子 × 3 策略）</td>
+</tr>
+<tr>
+<td>测试</td>
+<td>182 项 Python + 16 项前端，CI 全绿</td>
+</tr>
+<tr>
+<td>发布文案</td>
+<td><code>docs/launch.md</code>（五个渠道）</td>
+</tr>
+</tbody>
+</table>
   </main>
 </div>
 <footer>参数全部虚构 · 仅用于教学 / 研究仿真 · Apache-2.0 + CC BY 4.0</footer>
