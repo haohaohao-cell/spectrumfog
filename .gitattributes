@@ -1,0 +1,7 @@
+# 统一用 LF：Python 源码、YAML、Markdown 都按 LF 入库，
+# 避免 Windows 上 checkout 成 CRLF 后与 replay 的字节级比对 / 哈希产生差异。
+* text=auto eol=lf
+
+*.png binary
+*.gif binary
+*.jpg binary

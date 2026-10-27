@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "If you use this software in academic work, please cite it as below."
+title: "SpectrumFog: a partially observable spectrum-electromagnetic simulation platform"
+abstract: >-
+  Deterministic simulation core for spectrum-electromagnetic scenarios: radar equation,
+  jamming-to-signal ratio, burn-through range, Swerling I detection probability,
+  fixed-step clock with seeded RNG, JSONL replay that reproduces byte-for-byte,
+  and 2D top-down visualisation. All models use public textbook formulations
+  evaluated with fictional parameters.
+type: software
+authors:
+  - family-names: "郝"
+    given-names: "仁昱"
+version: 0.1.0
+date-released: "2026-10-27"
+license: Apache-2.0
+keywords:
+  - simulation
+  - electronic-warfare
+  - partial-observability
+  - radar
+  - spectrum
+  - reproducible

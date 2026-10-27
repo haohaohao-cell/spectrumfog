@@ -1,0 +1,50 @@
+# 01_duel — 单雷达 vs 单干扰机（T0 的第一个想定）
+#
+# 全部参数为虚构值，不来自任何真实装备（PROJECT.md §12 合规红线）。
+#
+# 选值目标：让三张 T0 图在同一个距离窗口里都能看到拐点 ——
+#   纯热噪声检测距离 ≈ 59 km（Pd = 0.5, Pfa = 1e-6）
+#   烧穿距离 R_bt ≈ 3.2 km
+#   干扰机站在 30 km：已在检测范围内、又在烧穿距离之外 → 被压制
+#
+# 已知简化：v1 不含脉压 / 相干积累的处理增益，所以"够用的干扰功率"看起来偏小
+# （一台 90 W 的宽带噪声干扰机就能压住 30 km 外的雷达）。这是模型的已知缺口，
+# 不是参数写错；处理增益在 T3b 的链路预算里才补。
+
+meta:
+  name: 01_duel
+  seed: 42
+  dt: 1.0            # s
+  duration: 600      # s
+
+environment:
+  noise_figure_db: 3.0
+  temperature_k: 290
+
+platforms:
+  - id: radar_a
+    side: blue
+    pos: [0, 0]      # m，[east, north]
+    emitters:
+      - kind: radar
+        freq_hz: 3.0e9
+        bw_hz: 2.0e6
+        pt_w: 1.5e5
+        gain_db: 35
+        sigma_m2: 1.0
+        loss_db: 3
+
+  - id: jammer_b
+    side: red
+    pos: [30000, 0]
+    emitters:
+      - kind: noise_jammer
+        freq_hz: 3.0e9
+        bw_hz: 1.0e8
+        pj_w: 90.0
+        gain_db: 0
+
+sensors: []
+
+objectives:
+  - {type: localize, target: jammer_b, cep_m: 500}

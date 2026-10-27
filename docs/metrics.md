@@ -1,0 +1,105 @@
+# 指标定义（全项目唯一口径）
+
+> PROJECT.md §8 要求所有指标在这里定义一次，CLI / Web / Gym / AAR 都引用本文件，
+> 不许各自另立口径。实现状态列标明当前是否已有代码。
+
+| 指标 | 定义 | 方向 | 实现 |
+|---|---|---|---|
+| **Pd** | 单次照射的检测概率 | 越高越好 | ✅ `physics.radar.pd_swerling1` |
+| **CEP50 / CEP90** | 定位误差圆半径（50% / 90% 分位） | 越低越好 | ⬜ T3a |
+| **T_expose** | 己方辐射源被对方有效定位的持续时间 | 越短越好 | ⬜ T3a |
+| **Link_avail** | 链路可用时间占比（AJ margin > 0） | 越高越好 | ⬜ T1（公式已在 `physics.comms`） |
+| **ID_acc** | 辐射源型号识别正确率 | 越高越好 | ⬜ T3a |
+| **Score** | 上述指标的加权向量 | — | ⬜ T3b |
+
+## 1. Pd — 单次照射检测概率
+
+```
+SNR = Pr / (Pn + Pj_rx)        # SINR 口径，含噪声压制干扰
+Pd  = Pfa ^ (1 / (1 + SNR))    # Swerling I 单脉冲闭式
+```
+
+- 输入：`Pr`、`Pn`、`Pj_rx` 全是线性功率（W），`Pfa` 是概率。
+- **口径注意**：Pd 是"单次照射"的概率，不是"一段时间内至少检测一次"。
+  后者（累计检测概率）在 T1 的 `engine/detect.py` 里由多次照射的独立假设合成，
+  计算方式是 `P_detect_cum = 1 - Π(1 - Pd_i)`，届时单独列出，不与 Pd 混称。
+- **T1 实现**：replay 里每个 tick 记两样东西 —— `link.pd`（模型概率，确定性）与
+  `detection.detected`（一次 Bernoulli 抽样）。动画里的 TRACKING/JAMMED 用的是
+  `pd` 与门槛比较（确定性），抽样结果只作为参考阶梯线。
+  **单次漏检不等于丢批**：没有航迹维持（M-of-N）之前，不许把 `detected=False`
+  统计成"目标丢失"。等 T3a 的 `detect.py` 引入航迹状态机，再定义 "track lost"。
+- 复现用参数：`Pfa` 默认 1e-6，必须在想定或 CLI 里显式给出并写进 replay。
+
+## 2. CEP50 / CEP90 — 定位误差圆
+
+对某个辐射源的一组定位估计 `p̂_i`（真值 `p_i`，均在同一坐标系、单位米）：
+
+```
+e_i     = || p̂_i - p_i ||                  # 单次定位误差 [m]
+CEP50   = median(e)                         # 50% 分位
+CEP90   = percentile(e, 90)                 # 90% 分位
+```
+
+- 均匀分布假设下 `CEP50 = 0.5 · R_max`；二维圆高斯近似下 `CEP50 ≈ 1.1774 σ`。
+  两种近似只用于 sanity check，**指标本身一律用样本分位数**，不用近似公式。
+- 样本量 < 30 时必须在报告里注明样本量，否则分位数没有意义。
+- 想定里的 `objectives[].cep_m` 是**门槛**，不是指标值：
+  `CEP50 ≤ cep_m` 视为该目标达成。
+
+## 3. T_expose — 暴露时长
+
+己方辐射源被对方"有效定位"的累计时间：
+
+```
+T_expose = dt · #{ t : CEP50(t) ≤ cep_threshold, 且估计来自对方传感器 }
+```
+
+- `cep_threshold` 取自想定 `objectives[].cep_m`；没给就用默认 500 m（写进 replay 的 meta）。
+- 只有"有效定位"的 tick 才计入；漏检、虚假目标导致的错误估计不计入暴露。
+- 单位秒（tick 数 × `meta.dt`），不是 tick 数。
+
+## 4. Link_avail — 链路可用率
+
+```
+AJ_margin_dB = Gp + Mc - required_JS_dB
+Link_avail   = dt · #{ t : AJ_margin_dB(t) > 0 } / duration
+```
+
+- `Gp`（处理增益）、`Mc`（编码增益）由想定给定（虚构值），`required_JS_dB` 是链路能容忍的干信比。
+- 返回值是 0–1 的**占比**；tick 数只在内部用。
+- 实现位置：`physics.comms.aj_margin_db` + `link_available`（公式已就位，引擎接入在 T1）。
+
+## 5. ID_acc — 识别正确率
+
+```
+ID_acc = 识别正确的辐射源数 / 被识别的辐射源数
+```
+
+- "识别"指 `kind` / 型号标签的正确判定；拒识（放弃判定）不计入分母，但必须单独报告拒识率，
+  否则"全拒识 = 100% 正确"这种退化策略会刷榜。
+- v1 的识别特征是频率、带宽、PRI 等虚构参数；T3a 才做归因。
+
+## 6. Score — 多目标评分向量
+
+不用"血量"，用向量（PROJECT.md §4）。想定里给权重：
+
+```yaml
+# 计划中的 schema（T3b 落地，现在还不被解析）
+score:
+  weights: {cep50: 0.4, id_acc: 0.3, t_expose: 0.2, link_avail: 0.1}
+```
+
+```
+Score = Σ_i w_i · normalize_i(metric_i)
+```
+
+- `normalize_i` 把各指标映射到 0–1，方向已在上表统一（越低越好的先取反）。
+- **必须同时输出向量本身**，不能只给标量分：排行榜上"分高"和"分高的原因"是两件事，
+  后者由 T3a 的 AAR 回答。
+- 权重写进想定（可复现），不进代码常量。
+
+## 7. 复现要求
+
+每个指标在 replay 里必须自带**计算它所需的最小信息**（一行一个事件、可独立解析）：
+`Pfa`、`cep_threshold`、`dt`、所用传感器 id。任何指标都能从 replay 单独重算，
+不依赖内存中的中间状态（PROJECT.md §2 决策 1）。

@@ -1,0 +1,13 @@
+SpectrumFog / 频谱迷雾
+Copyright 2026 郝仁昱
+
+This product includes software developed as part of the SpectrumFog project.
+
+Licensing
+---------
+* Code (src/, viz/, tests/, pyproject.toml): Apache License 2.0 — see LICENSE
+* Documentation and scenarios (docs/, scenarios/, README.md): CC BY 4.0 — see LICENSE-docs
+
+All physical models are public textbook formulations (radar equation, Friis,
+Swerling I) evaluated with fictional parameters. The project contains no real
+equipment performance data, unit designations, or deployment information.

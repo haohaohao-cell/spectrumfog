@@ -1,0 +1,61 @@
+# 02_standoff — 干扰机逼近 → 雷达探测边界收缩 → 目标丢失（T1 的动画想定）
+#
+# 全部参数虚构（PROJECT.md §12）。
+#
+# 这一份想定专门用来演示"站距干扰"（干扰机与目标分离，Tj 不等于 Rt）：
+#   * 雷达在原点，对 σ=1 m² 的目标无干扰时能看 59.5 km；
+#   * 干扰机从 60 km 沿 +x 逼近到 4 km，只带 1 W 功率；
+#   * 目标停在 12 km 处（35° 方位），看雷达什么时候把它丢掉。
+#
+# 为什么会丢：JS(Rt, Rj) = R_bt² · Rj² / Rt⁴，干扰机越近，围绕雷达的
+# Pd=0.5 边界半径 ∝ sqrt(Rj) 越小；约 21 km 处边界缩到 12 km，目标出界。
+#
+# 为什么 1 W 就够：v1 没有脉压/相干积累的处理增益，且 100 MHz 的噪声带宽
+# 落进 2 MHz 接收机的只有 1/50（20 mW）。这是模型已知缺口（docs/physics.md §7.1），
+# 不代表真实装备的干扰功率量级。
+
+meta:
+  name: 02_standoff
+  seed: 7
+  dt: 2.0            # s
+  duration: 240      # s → 121 帧，12 fps 正好 10 秒 GIF
+
+environment:
+  noise_figure_db: 3.0
+  temperature_k: 290
+
+platforms:
+  - id: radar_a
+    side: blue
+    pos: [0, 0]
+    emitters:
+      - kind: radar
+        freq_hz: 3.0e9
+        bw_hz: 2.0e6
+        pt_w: 1.5e5
+        gain_db: 35
+        sigma_m2: 1.0
+        loss_db: 3
+
+  - id: jammer_b
+    side: red
+    pos: [60000, 0]          # 与第一个航路点一致，便于只看想定的人读懂
+    waypoints:
+      - {t: 0, pos: [60000, 0]}
+      - {t: 240, pos: [4000, 0]}   # 233 m/s 一路压到 4 km
+    emitters:
+      - kind: noise_jammer
+        freq_hz: 3.0e9
+        bw_hz: 1.0e8
+        pj_w: 1.0
+        gain_db: 0
+
+  - id: target_c
+    side: red
+    pos: [9830, 6880]        # 12 km / 35°：静止待机目标
+    emitters: []
+
+sensors: []
+
+objectives:
+  - {type: detect, target: target_c}

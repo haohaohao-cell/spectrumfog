@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "spectrumfog"
+version = "0.1.0"
+description = "Partially observable spectrum-electromagnetic simulation core"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [{ name = "SpectrumFog" }]
+keywords = ["simulation", "electronic-warfare", "partial-observability"]
+classifiers = [
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+dependencies = [
+    "numpy>=1.26",
+    "pydantic>=2.5",
+    "pyyaml>=6.0",
+    "matplotlib>=3.8",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0"]
+# T1 之后才会用到，先不装：
+bench = ["gymnasium>=1.0"]
+
+[project.scripts]
+spectrumfog = "spectrumfog.cli:main"
+
+# 显式列出包：内核在 src/ 下，表现层 viz/ 在仓库根（PROJECT.md §5 的目录结构）。
+# 新增子包（例如 T1 的 spectrumfog.engine）时记得加到这里。
+[tool.setuptools]
+packages = [
+    "spectrumfog",
+    "spectrumfog.engine",
+    "spectrumfog.model",
+    "spectrumfog.physics",
+    "viz",
+    "viz.static",
+]
+package-dir = { "" = "src", "viz" = "viz", "viz.static" = "viz/static" }
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+# src: 内核；. : 仓库根的 viz 包（测试里要 import viz.static.plot）
+pythonpath = ["src", "."]
+addopts = "-ra"
