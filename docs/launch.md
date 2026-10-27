@@ -371,7 +371,7 @@ Physics write-up: https://github.com/haohaohao-cell/spectrumfog/blob/main/docs/p
 - [ ] 明确写了"educational / research simulation，不提供战术建议"
 - [ ] 缺口（无处理增益、无多径、无航迹）在正文里主动交代，不是等人问
 - [ ] 许可证与引用信息在仓库可见（Apache-2.0 + CC BY 4.0 + CITATION.cff）
-- [ ] GitHub 仓库的 Social preview 已上传
+- [x] GitHub 仓库的 Social preview 已上传（2026-10-27）
 - [x] 数字与链接按 v0.2.0 核对（2026-10-27：6 想定 / 182+16 测试 / 三处线上地址）
 
 ---
