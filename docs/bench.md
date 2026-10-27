@@ -76,6 +76,9 @@ scenario       policy             reward  jammed  exposed  Pd mean   J/S mean   
 05_mobile      always-jam      81.7±  3    100%       7%    0.002       1.52         25
 05_mobile      random          51.2±  3     64%       6%    0.362       0.73         37
 05_mobile      stealth          0.4±  0      4%       3%    0.952       1.24         88
+06_decoy       stealth         60.0±  0    100%       0%    0.363       0.00          —
+06_decoy       random          59.5±  0    100%       0%    0.137       0.55          —
+06_decoy       always-jam      58.8±  0    100%       0%    0.000       1.17          —
 ```
 
 **怎么读**：

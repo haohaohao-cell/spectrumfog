@@ -66,6 +66,9 @@ __all__ = [
     "range_at_js",
     "snr_thermal",
     "sinr",
+    "decoy_transmit_power",
+    "decoy_echo_power",
+    "decoy_equivalent_rcs",
     "pd_swerling1",
     "pd_from_powers",
     "detection_range",
@@ -565,3 +568,95 @@ def detection_range(
     qb = s0 * b
     u = (2.0 * a) / (math.sqrt(qb * qb + 4.0 * qa * a) + qb)
     return np.float64(math.sqrt(u))
+
+
+# --- 诱饵：转发式假目标（T3b） -----------------------------------------------
+
+
+def decoy_transmit_power(pt_w, gt, decoy_gain, amplification, lam, range_m):
+    """诱饵转发出去的功率 [W]：照到它的功率 × 放大倍数。
+
+    对 ESM 来说，诱饵就是一个"只在该帧辐射"的发射源——所以它能不能被发现，
+    取决于雷达照得有多强，而不是诱饵自己设定的功率。
+    """
+    _require_positive(
+        pt_w=pt_w,
+        gt=gt,
+        decoy_gain=decoy_gain,
+        amplification=amplification,
+        lam=lam,
+        range_m=range_m,
+    )
+    illumination = (
+        np.asarray(pt_w, dtype=float)
+        * np.asarray(gt, dtype=float)
+        * np.asarray(decoy_gain, dtype=float)
+        * np.asarray(lam, dtype=float) ** 2
+        / (_FOUR_PI_SQ * np.asarray(range_m, dtype=float) ** 2)
+    )
+    return illumination * np.asarray(amplification, dtype=float)
+
+
+def decoy_echo_power(
+    pt_w,
+    gt,
+    gr,
+    decoy_gain,
+    amplification,
+    lam,
+    range_m,
+):
+    """转发式诱饵在雷达处形成的回波功率 [W]。
+
+    链路是两段单程：
+
+        P_r = [Pt·Gt·G_d·λ²/((4π)²·R²)] · A · [G_d·Gr·λ²/((4π)²·R²)]
+            = Pt·Gt·Gr·λ⁴·G_d²·A / ((4π)⁴·R⁴)
+
+    其中 ``A`` 是诱饵的放大倍数（线性）。诱饵自身的插入损耗折进 ``A``，
+    所以这里没有单独的 ``loss`` 参数——与雷达方程的 ``L`` 是两件事，
+    混在一起会让"等效 RCS"失去意义。
+    """
+    _require_positive(
+        pt_w=pt_w,
+        gt=gt,
+        gr=gr,
+        decoy_gain=decoy_gain,
+        amplification=amplification,
+        lam=lam,
+        range_m=range_m,
+    )
+    return (
+        decoy_transmit_power(
+            pt_w=pt_w,
+            gt=gt,
+            decoy_gain=decoy_gain,
+            amplification=amplification,
+            lam=lam,
+            range_m=range_m,
+        )
+        * np.asarray(decoy_gain, dtype=float)
+        * np.asarray(gr, dtype=float)
+        * np.asarray(lam, dtype=float) ** 2
+        / (_FOUR_PI_SQ * np.asarray(range_m, dtype=float) ** 2)
+    )
+
+
+def decoy_equivalent_rcs(lam, gain, amplification, loss=1.0):
+    """把诱饵折算成"等效 RCS" [m²]，便于和目标放在一起比较。
+
+    令诱饵回波与同距离上的目标回波相等，解出 σ：
+
+        σ_eq = λ²·G_d²·A·L / (4π)
+
+    与 ``decoy_echo_power`` 严格一致：
+    ``received_power(..., sigma_m2=σ_eq, ..., loss=L)`` 得到的就是同样的回波功率。
+    """
+    _require_positive(lam=lam, gain=gain, amplification=amplification, loss=loss)
+    return (
+        np.asarray(lam, dtype=float) ** 2
+        * np.asarray(gain, dtype=float) ** 2
+        * np.asarray(amplification, dtype=float)
+        * np.asarray(loss, dtype=float)
+        / _FOUR_PI
+    )

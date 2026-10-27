@@ -110,7 +110,8 @@ spectrumfog/
 │   ├── 02_standoff.yaml    站距干扰 + 移动干扰机（T1 动画想定）
 │   ├── 03_triad.yaml       雷达 + 通信链路 + 双频段干扰机
 │   ├── 04_fog.yaml         三辐射源 + 虚假目标
-│   └── 05_mobile.yaml       雷达 / 干扰机 / 目标三方机动
+│   ├── 05_mobile.yaml       雷达 / 干扰机 / 目标三方机动
+│   └── 06_decoy.yaml        转发式诱饵（等效 RCS 6.3 m²）
 ├── bench/                  T3：baseline 策略 + 评测脚本
 └── tests/
 ```

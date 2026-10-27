@@ -1,4 +1,4 @@
-# SpectrumFog / 频谱迷雾
+﻿# SpectrumFog / 频谱迷雾
 
 [![ci](https://github.com/haohaohao-cell/spectrumfog/actions/workflows/ci.yml/badge.svg)](https://github.com/haohaohao-cell/spectrumfog/actions/workflows/ci.yml)
 [![pages](https://github.com/haohaohao-cell/spectrumfog/actions/workflows/pages.yml/badge.svg)](https://haohaohao-cell.github.io/spectrumfog/)
@@ -56,7 +56,7 @@ spectrumfog run scenarios/01_duel.yaml             # 静态曲线：烧穿 / Pd�
 | 观测（AOA/TOA/功率测量）+ 融合定位 + 虚假目标 | ✅ T3a |
 | AAR 复盘（时间线 · 暴露时长 · 留一法归因 · HTML 报告） | ✅ T3a |
 | Web 交互（拖动干扰机 → 热力图与曲线） | ✅ 线上已部署 |
-| Gymnasium 环境 + 3 个 baseline + 5 个想定 | ✅ T3b |
+| Gymnasium 环境 + 3 个 baseline + 6 个想定 | ✅ T3b |
 | 文档站 · 公开排行榜 | ⬜ T3b 后半段 |
 
 ## 两个反直觉的结果（免得你以为算错了）
@@ -133,6 +133,7 @@ spectrumfog aar out/01_duel.jsonl                    # 出 out/01_duel_aar.html
 
 ```
 scenario       policy             reward  jammed  exposed  Pd mean   J/S mean     首告警[s]
+----------------------------------------------------------------------------------------
 01_duel        always-jam     281.0± 16    100%      51%    0.000      85.63          2
 01_duel        random         223.9± 13     68%      30%    0.305      54.71          5
 01_duel        stealth          3.5±  3      4%       3%    0.917      53.66         46
@@ -148,6 +149,9 @@ scenario       policy             reward  jammed  exposed  Pd mean   J/S mean   
 05_mobile      always-jam      81.7±  3    100%       7%    0.002       1.52         25
 05_mobile      random          51.2±  3     64%       6%    0.362       0.73         37
 05_mobile      stealth          0.4±  0      4%       3%    0.952       1.24         88
+06_decoy       stealth         60.0±  0    100%       0%    0.363       0.00          —
+06_decoy       random          59.5±  0    100%       0%    0.137       0.55          —
+06_decoy       always-jam      58.8±  0    100%       0%    0.000       1.17          —
 ```
 
 读法：90 W 的 `01_duel` 里蛮干就能赢（30 km 处 Pd 已压到 1e-6，靠近纯属浪费）；
@@ -181,7 +185,8 @@ scenarios/
   03_triad.yaml       T3b：雷达 + 通信链路 + 双频段干扰机（链路可用率）
   04_fog.yaml         T3b：三个辐射源 + 5e-3 虚警率（多目标 + 虚假目标）
   05_mobile.yaml      T3b：雷达 / 干扰机 / 目标三方同时机动
-tests/              165 项：物理、想定、时钟、回放、确定性、动画、融合、AAR、通信链路、Gym、Web 数据包、CLI
+  06_decoy.yaml       T3b：转发式诱饵骗雷达（等效 RCS 6.3 m²）
+tests/              172 项：物理、想定、时钟、回放、确定性、动画、融合、AAR、通信链路、Gym、Web 数据包、CLI
 viz/web/src/        16 项前端单测（查表解码、插值、首屏渲染）
 docs/               physics.md（公式与假设）· design.md（建模取舍）· scenario.md（YAML schema）
                     metrics.md（指标定义）· web.md（前端数据包）· bench.md（Gym 与评测）
@@ -220,3 +225,4 @@ docs/               physics.md（公式与假设）· design.md（建模取舍�
 - **文档与想定**（`docs/`、`scenarios/`、`README.md`）：[CC BY 4.0](LICENSE-docs)
 
 引用信息见 [CITATION.cff](CITATION.cff)。
+

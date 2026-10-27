@@ -78,6 +78,19 @@ platforms:
         pj_w: 90.0
         gain_db: 0
 
+  # 红方诱饵：不主动辐射，只有被蓝方雷达照到才放大转发。
+  # 等效 RCS = λ²·G²·A·L/(4π) = 0.1²·2²·100·2/(4π) ≈ 0.64 m²，
+  # 比 30 km 处的真目标（σ=2 m²）在雷达上更亮 —— 这就是欺骗的目的。
+  - id: decoy_r
+    side: red
+    pos: [12000, -9000]
+    emitters:
+      - kind: decoy
+        freq_hz: 3.0e9
+        bw_hz: 2.0e6
+        gain_db: 3
+        amplification_db: 20
+
 sensors:
   - id: esm_1
     kind: esm

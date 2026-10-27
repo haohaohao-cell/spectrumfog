@@ -1,0 +1,85 @@
+# 06_decoy — 诱饵骗雷达（T3b）
+#
+# 红方在真目标旁边放一个转发式诱饵。诱饵不主动辐射，被雷达照到才放大转发，
+# 在雷达上形成一个**等效 RCS 6.4 m²** 的假目标——比 70 km 外的真目标亮得多。
+#
+# 这一份的看点不是"打掉谁"，而是**雷达先相信谁**：
+#   真目标 70 km 只剩噪声级回波；诱饵 22 km、等效 6.4 m²，Pd ≈ 1。
+# 干扰机只有 0.5 W，基本不构成压制，所以能单独看诱饵的效果。
+#
+# 代价在观测侧：诱饵转发时也在辐射，蓝方 ESM 能定位它（`objective: localize`）。
+
+meta:
+  name: 06_decoy
+  seed: 41
+  dt: 2.0
+  duration: 120
+
+environment:
+  noise_figure_db: 3.0
+  temperature_k: 290
+
+platforms:
+  - id: radar_a
+    side: blue
+    pos: [0, 0]
+    emitters:
+      - kind: radar
+        freq_hz: 3.0e9
+        bw_hz: 2.0e6
+        pt_w: 1.0e5
+        gain_db: 35
+        sigma_m2: 2.0
+        loss_db: 3
+
+  # 真目标：70 km 外，Pd 只有 0.36
+  - id: target_r
+    side: red
+    pos: [70000, 10000]
+    emitters: []
+
+  # 诱饵：22 km 处，转发增益 30 dB → 等效 RCS ≈ 6.4 m²
+  - id: decoy_r
+    side: red
+    pos: [22000, -3000]
+    emitters:
+      - kind: decoy
+        freq_hz: 3.0e9
+        bw_hz: 2.0e6
+        gain_db: 3
+        amplification_db: 30
+
+  # 一台很弱的干扰机：只是为了让"雷达 vs 干扰机"这条链路有对象
+  - id: jammer_w
+    side: red
+    pos: [90000, 20000]
+    emitters:
+      - kind: noise_jammer
+        freq_hz: 3.0e9
+        bw_hz: 1.0e8
+        pj_w: 0.5
+        gain_db: 0
+
+sensors:
+  - id: esm_1
+    kind: esm
+    side: blue
+    pos: [0, -25000]
+    noise_figure_db: 6.0
+    bw_hz: 1.0e5
+  - id: esm_2
+    kind: esm
+    side: blue
+    pos: [0, 25000]
+    noise_figure_db: 6.0
+    bw_hz: 1.0e5
+  - id: esm_3
+    kind: esm
+    side: blue
+    pos: [-25000, 0]
+    noise_figure_db: 6.0
+    bw_hz: 1.0e5
+
+objectives:
+  - {type: detect, target: target_r}
+  - {type: localize, target: decoy_r, cep_m: 500}

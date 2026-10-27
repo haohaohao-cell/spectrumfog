@@ -128,8 +128,43 @@ class CommsEmitter(_EmitterBase):
         return 10.0 * math.log10(self.gain)
 
 
+class DecoyEmitter(_EmitterBase):
+    """转发式诱饵（T3b）：收到雷达照射后放大转发，制造假回波。
+
+    与噪声干扰机不同，诱饵**不主动辐射**——只有被雷达照到才转发，
+    所以它对 ESM 的可发现性取决于照射强度，而不是它自己"开了多大功率"。
+    等效 RCS 见 ``physics.radar.decoy_equivalent_rcs``。
+    """
+
+    kind: Literal["decoy"]
+    gain: float = Field(
+        gt=0,
+        validation_alias="gain_db",
+        serialization_alias="gain_db",
+        description="收发共用天线增益 [线性]，YAML 里写 gain_db",
+    )
+    amplification_db: float = Field(
+        default=20.0,
+        description="转发放大倍数 [dB]（含插入损耗的净增益）",
+    )
+
+    @field_validator("gain", mode="before")
+    @classmethod
+    def _gain_from_db(cls, value: object) -> float:
+        return float(db_to_linear(value))
+
+    @property
+    def gain_db(self) -> float:
+        return 10.0 * math.log10(self.gain)
+
+    @property
+    def amplification(self) -> float:
+        """线性放大倍数。"""
+        return 10.0 ** (self.amplification_db / 10.0)
+
+
 #: 想定 emitters 列表的元素类型，按 ``kind`` 字段分派。
 Emitter = Annotated[
-    Union[RadarEmitter, NoiseJammerEmitter, CommsEmitter],
+    Union[RadarEmitter, NoiseJammerEmitter, CommsEmitter, DecoyEmitter],
     Field(discriminator="kind"),
 ]

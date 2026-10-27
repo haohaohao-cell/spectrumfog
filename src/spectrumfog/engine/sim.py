@@ -21,7 +21,7 @@ import numpy as np
 
 from .. import metrics
 from ..bands import in_band
-from ..model.emitter import CommsEmitter
+from ..model.emitter import CommsEmitter, DecoyEmitter
 from ..model.platform import Platform
 from ..model.scenario import Scenario
 from ..physics import comms, propagation, radar
@@ -63,7 +63,11 @@ class Simulation:
     def run(self) -> SimulationResult:
         scenario = self.scenario
         radar_platform, radar_emitter = scenario.primary_radar()
-        jammer_platform, jammer_emitter = scenario.primary_jammer()
+        # 每个接收机选"自己频段内"的干扰机；找不到才退回主干扰机
+        radar_jammer = self._jammer_for(radar_emitter.freq_hz, radar_emitter.bw_hz)
+        jammer_platform, jammer_emitter = (
+            radar_jammer if radar_jammer is not None else scenario.primary_jammer()
+        )
         target_platform = self._target_platform(jammer_platform)
         params = scenario.link_params(radar_platform.id, jammer_platform.id)
         environment = scenario.environment
@@ -128,6 +132,8 @@ class Simulation:
         pd_series: list[float] = []
         jammer_ranges: list[float] = []
         comms_states: list[bool] = []
+        decoy_pd_series: list[float] = []
+        decoy_detected: list[bool] = []
 
         for tick in clock:
             positions = {
@@ -245,22 +251,42 @@ class Simulation:
                 for emitter in platform.emitters:
                     if not isinstance(emitter, CommsEmitter):
                         continue
+                    comms_jammer = self._jammer_for(emitter.freq_hz, emitter.bw_hz)
                     comms_event = self._comms_event(
                         t_s=tick.t,
                         platform=platform,
                         emitter=emitter,
                         positions=positions,
-                        jammer_pos=positions[jammer_platform.id],
-                        jammer_emitter=jammer_emitter,
-                        params=params,
+                        jammer=comms_jammer,
                     )
                     events.append(comms_event)
                     comms_states.append(bool(comms_event["available"]))
 
+            # --- 诱饵：雷达看到的假目标（T3b）---
+            decoy_events, decoy_powers = self._decoy_tick(
+                t_s=tick.t,
+                positions=positions,
+                radar_platform=radar_platform,
+                radar_emitter=radar_emitter,
+                radar_pos=radar_pos,
+                target_echo_w=pr_w,
+                params=params,
+                pn_w=pn_w,
+                pj_rx_w=pj_rx_w,
+                rng=rng,
+            )
+            for decoy_event in decoy_events:
+                events.append(decoy_event)
+                decoy_pd_series.append(float(decoy_event["pd"]))
+                decoy_detected.append(bool(decoy_event["detected"]))
+
             # --- ESM 观测 + 融合（T3a）---
             if scenario.sensors:
                 observations = self._observe_tick(
-                    t_s=tick.t, positions=positions, rng=rng
+                    t_s=tick.t,
+                    positions=positions,
+                    rng=rng,
+                    effective_powers=decoy_powers,
                 )
                 for observation in observations:
                     events.append(observation.to_event())
@@ -277,10 +303,111 @@ class Simulation:
             unjammed_range_m=unjammed_range_m,
             n_fixes=sum(1 for event in events if event["kind"] == "estimate"),
             comms_states=comms_states,
+            decoy_pd=decoy_pd_series,
+            decoy_detected=decoy_detected,
         )
         return SimulationResult(meta=meta, events=events, summary=summary)
 
     # --- 内部 -------------------------------------------------------------
+
+    def _jammer_for(self, freq_hz: float, bw_hz: float):
+        """挑一台与给定频段重叠的干扰机；没有就返回 None。"""
+        for platform, emitter in self.scenario.jammers():
+            if in_band(freq_hz, bw_hz, emitter.freq_hz, emitter.bw_hz):
+                return platform, emitter
+        return None
+
+    def _decoy_tick(
+        self,
+        *,
+        t_s: float,
+        positions: dict[str, tuple[float, float]],
+        radar_platform: Platform,
+        radar_emitter,
+        radar_pos: tuple[float, float],
+        target_echo_w: float,
+        params: dict[str, float],
+        pn_w: float,
+        pj_rx_w: float,
+        rng: np.random.Generator,
+    ) -> tuple[list[dict[str, Any]], dict[str, float]]:
+        """本 tick 每个诱饵在雷达处造成的假目标，以及它自己的转发功率。
+
+        返回 ``(事件列表, {平台 id: 转发功率})``——后者给 ESM 用：
+        诱饵只在该帧辐射，所以它的事后可发现性由照射强度决定。
+        """
+        events: list[dict[str, Any]] = []
+        powers: dict[str, float] = {}
+        for platform in self.scenario.platforms:
+            for emitter in platform.emitters:
+                if not isinstance(emitter, DecoyEmitter):
+                    continue
+                if not in_band(
+                    radar_emitter.freq_hz,
+                    radar_emitter.bw_hz,
+                    emitter.freq_hz,
+                    emitter.bw_hz,
+                ):
+                    continue
+
+                decoy_pos = positions[platform.id]
+                range_m = _distance(radar_pos, decoy_pos)
+                tx_power = float(
+                    radar.decoy_transmit_power(
+                        pt_w=params["pt_w"],
+                        gt=params["gain"],
+                        decoy_gain=emitter.gain,
+                        amplification=emitter.amplification,
+                        lam=params["lam"],
+                        range_m=range_m,
+                    )
+                )
+                echo_w = float(
+                    radar.decoy_echo_power(
+                        pt_w=params["pt_w"],
+                        gt=params["gain"],
+                        gr=params["gain"],
+                        decoy_gain=emitter.gain,
+                        amplification=emitter.amplification,
+                        lam=params["lam"],
+                        range_m=range_m,
+                    )
+                )
+                sigma_eq = float(
+                    radar.decoy_equivalent_rcs(
+                        lam=params["lam"],
+                        gain=emitter.gain,
+                        amplification=emitter.amplification,
+                        loss=params["loss"],
+                    )
+                )
+                pd_decoy = float(
+                    radar.pd_from_powers(self.pfa, echo_w, pn_w, pj_rx_w)
+                )
+                draw = float(rng.random())
+
+                powers[platform.id] = tx_power
+                events.append(
+                    {
+                        "kind": "decoy",
+                        "t": t_s,
+                        "decoy": platform.id,
+                        "radar": radar_platform.id,
+                        "pos": [float(decoy_pos[0]), float(decoy_pos[1])],
+                        "range_m": range_m,
+                        "sigma_eq_m2": sigma_eq,
+                        "tx_power_w": tx_power,
+                        "echo_w": echo_w,
+                        "target_echo_w": target_echo_w,
+                        "echo_ratio": (
+                            echo_w / target_echo_w if target_echo_w > 0.0 else None
+                        ),
+                        "pd": pd_decoy,
+                        "draw": draw,
+                        "detected": draw < pd_decoy,
+                    }
+                )
+        return events, powers
 
     def _observe_tick(
         self,
@@ -288,6 +415,7 @@ class Simulation:
         t_s: float,
         positions: dict[str, tuple[float, float]],
         rng: np.random.Generator,
+        effective_powers: dict[str, float] | None = None,
     ) -> list[detect.EsmMeasurement]:
         """本 tick 所有 ESM 传感器对敌方辐射源的观测（含虚假目标）。"""
         observations: list[detect.EsmMeasurement] = []
@@ -299,6 +427,9 @@ class Simulation:
                     continue
                 for emitter in platform.emitters:
                     power = getattr(emitter, "pt_w", None) or getattr(emitter, "pj_w", None)
+                    if effective_powers and platform.id in effective_powers:
+                        # 诱饵的辐射功率取决于本帧被照得多亮，不是固定值
+                        power = effective_powers[platform.id]
                     if power is None:
                         continue
                     observations.append(
@@ -382,9 +513,7 @@ class Simulation:
         platform: Platform,
         emitter: CommsEmitter,
         positions: dict[str, tuple[float, float]],
-        jammer_pos: tuple[float, float],
-        jammer_emitter,
-        params: dict[str, float],
+        jammer: tuple[Platform, Any] | None,
     ) -> dict[str, Any]:
         """一条链路的接收功率 / Eb/N0 / 实际 J/S / 抗干扰余量。"""
         environment = self.scenario.environment
@@ -402,27 +531,24 @@ class Simulation:
                 range_m=float(np.hypot(rx_pos[0] - tx_pos[0], rx_pos[1] - tx_pos[1])),
             )
         )
-        # 频段不重叠的干扰机打不到这条链路
-        band_ok = in_band(
-            emitter.freq_hz, emitter.bw_hz, jammer_emitter.freq_hz, jammer_emitter.bw_hz
-        )
-        pj_rx_w = (
-            float(
+        # 只有同频段的干扰机才打得到这条链路
+        pj_rx_w = 0.0
+        if jammer is not None:
+            jammer_platform, jammer_emitter = jammer
+            jammer_pos = positions[jammer_platform.id]
+            pj_rx_w = float(
                 radar.jammer_received_power(
-                    pj_w=params["pj_w"],
-                    gj=params["gj"],
+                    pj_w=float(jammer_emitter.pj_w),
+                    gj=float(jammer_emitter.gain),
                     gr=1.0,
                     lam=lam,
                     range_j_m=float(
                         np.hypot(rx_pos[0] - jammer_pos[0], rx_pos[1] - jammer_pos[1])
                     ),
                     bw_r_hz=emitter.bw_hz,
-                    bw_j_hz=params["bw_j_hz"],
+                    bw_j_hz=float(jammer_emitter.bw_hz),
                 )
             )
-            if band_ok
-            else 0.0
-        )
         js = pj_rx_w / ps_rx_w if ps_rx_w > 0.0 else 0.0
         noise_psd = float(
             comms.noise_psd(
@@ -537,6 +663,8 @@ class Simulation:
         unjammed_range_m: float,
         n_fixes: int = 0,
         comms_states: list[bool] | None = None,
+        decoy_pd: list[float] | None = None,
+        decoy_detected: list[bool] | None = None,
     ) -> dict[str, Any]:
         """两种口径分开报，别混：
 
@@ -569,6 +697,13 @@ class Simulation:
                 sum(comms_states) / len(comms_states) if comms_states else None
             ),
             "n_comms_samples": len(comms_states or []),
+            "decoy_pd_mean": (
+                sum(decoy_pd) / len(decoy_pd) if decoy_pd else None
+            ),
+            "decoy_detected_fraction": (
+                sum(decoy_detected) / len(decoy_detected) if decoy_detected else None
+            ),
+            "n_decoy_samples": len(decoy_pd or []),
         }
 
 

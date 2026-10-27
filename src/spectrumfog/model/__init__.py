@@ -6,7 +6,13 @@ T0 只落地 ``scenario.py`` / ``platform.py`` / ``emitter.py`` / ``sensor.py``�
 
 from __future__ import annotations
 
-from .emitter import CommsEmitter, Emitter, NoiseJammerEmitter, RadarEmitter
+from .emitter import (
+    CommsEmitter,
+    DecoyEmitter,
+    Emitter,
+    NoiseJammerEmitter,
+    RadarEmitter,
+)
 from .platform import Platform
 from .scenario import (
     Environment,
@@ -21,6 +27,7 @@ from .sensor import Sensor
 
 __all__ = [
     "CommsEmitter",
+    "DecoyEmitter",
     "Emitter",
     "NoiseJammerEmitter",
     "RadarEmitter",
