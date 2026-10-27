@@ -569,8 +569,8 @@ def build_parser() -> argparse.ArgumentParser:
     bench.add_argument("--episodes", type=int, default=5, help="每个组合跑几局（默认 5）")
     bench.add_argument(
         "--policies",
-        default="random,always-jam,stealth",
-        help="逗号分隔的策略名（默认 random,always-jam,stealth）",
+        default=None,
+        help="逗号分隔的策略名（默认取 suite，临时组合则用三个 baseline）",
     )
     bench.add_argument(
         "-o", "--out", type=Path, default=None, help="把结果写成 JSON"
@@ -578,16 +578,55 @@ def build_parser() -> argparse.ArgumentParser:
     bench.add_argument(
         "--markdown", type=Path, default=None, help="把结果写成 markdown 排行榜"
     )
+    bench.add_argument(
+        "--suite", type=Path, default=None, help="想定集合（默认 scenarios/suite_v1.yaml）"
+    )
+    bench.add_argument(
+        "--submit", action="store_true", help="把这次评测写成可校验的提交物"
+    )
+    bench.add_argument("--label", default=None, help="提交物署名（默认 unnamed）")
+    bench.add_argument(
+        "--submissions",
+        type=Path,
+        default=Path("submissions"),
+        help="提交物目录（默认 submissions/）",
+    )
+    bench.add_argument(
+        "--verify", type=Path, default=None, metavar="JSON", help="校验一份提交物"
+    )
+    bench.add_argument(
+        "--leaderboard", type=Path, default=None, metavar="DIR", help="从提交物目录汇总排名"
+    )
+    bench.add_argument(
+        "--write-md", type=Path, default=None, help="排行榜写到这里（默认打印）"
+    )
     return parser
 
 
 # --- bench：baseline 评测 -----------------------------------------------------
 
 
+def _policy_list(raw: str | None) -> list[str]:
+    """``--policies`` 的解析：没给就返回空列表（由调用方决定默认值）。"""
+    if not raw:
+        return []
+    return [name.strip() for name in raw.split(",") if name.strip()]
+
+
+DEFAULT_POLICIES = ("random", "always-jam", "stealth")
+
+
 def _bench(args: argparse.Namespace) -> int:
     try:
-        from .bench.policies import make_policy  # noqa: F401  (提前暴露 gymnasium 缺失)
         from .bench.runner import format_table, run_bench, write_json
+        from .bench.suite import (
+            build_submission,
+            load_submissions,
+            load_suite,
+            render_leaderboard,
+            verify_submission,
+            write_submission,
+        )
     except ImportError as exc:  # pragma: no cover - 取决于环境
         print(
             f"[错误] bench 需要 gymnasium（{exc}）。装：pip install -e \".[bench]\"",
@@ -595,12 +634,68 @@ def _bench(args: argparse.Namespace) -> int:
         )
         return 1
 
-    if args.all:
-        paths = sorted(Path("scenarios").glob("*.yaml"))
+    # --- 排行榜：只读 submissions/，不跑仿真 ---
+    if args.leaderboard is not None:
+        entries = load_submissions(args.leaderboard)
+        markdown = render_leaderboard(entries)
+        if args.write_md is not None:
+            args.write_md.parent.mkdir(parents=True, exist_ok=True)
+            args.write_md.write_text(markdown, encoding="utf-8")
+            print(f"排行榜（{len(entries)} 条提交）→ {args.write_md}")
+        else:
+            print(markdown)
+        return 0
+
+    suite = None
+    if args.suite is not None or args.submit or args.verify is not None:
+        suite_path = args.suite or Path("scenarios") / "suite_v1.yaml"
+        try:
+            suite = load_suite(suite_path)
+        except (FileNotFoundError, ValueError) as exc:
+            print(f"[错误] {exc}", file=sys.stderr)
+            return 1
+
+    # --- 校验提交物 ---
+    if args.verify is not None:
+        import json
+
+        try:
+            payload = json.loads(args.verify.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            print(f"[错误] 读不了提交物：{exc}", file=sys.stderr)
+            return 1
+        problems = verify_submission(payload, suite)
+        if problems:
+            print("[失败] 提交物与当前想定集合不一致：", file=sys.stderr)
+            for problem in problems:
+                print(f"  - {problem}", file=sys.stderr)
+            return 1
+        print(
+            f"[通过] {args.verify.name}：想定 {len(payload.get('scenarios', {}))} 份、"
+            f"结果 {len(payload.get('rows', []))} 行，与 {suite.name} v{suite.version} 一致"
+        )
+        return 0
+
+    # --- 选择想定与种子 ---
+    if suite is not None:
+        paths = [Path(item) for item in suite.scenario_paths]
+        seeds = suite.seeds
+        policy_names = _policy_list(args.policies) or list(suite.policies)
+    elif args.all:
+        paths = [
+            path
+            for path in sorted(Path("scenarios").glob("*.yaml"))
+            if not path.stem.startswith("suite")
+        ]
+        seeds = tuple(range(args.episodes))
+        policy_names = _policy_list(args.policies) or list(DEFAULT_POLICIES)
     elif args.scenario:
         paths = list(args.scenario)
+        seeds = tuple(range(args.episodes))
+        policy_names = _policy_list(args.policies) or list(DEFAULT_POLICIES)
     else:
-        print("[错误] 请给 --all 或 --scenario <path>", file=sys.stderr)
+        print("[错误] 请给 --suite / --all / --scenario / --leaderboard / --verify",
+              file=sys.stderr)
         return 2
 
     scenarios = []
@@ -614,17 +709,17 @@ def _bench(args: argparse.Namespace) -> int:
         print("[错误] 没有找到任何想定", file=sys.stderr)
         return 1
 
-    policy_names = [name.strip() for name in args.policies.split(",") if name.strip()]
     try:
-        rows = run_bench(scenarios, policy_names, episodes=args.episodes)
+        rows = run_bench(scenarios, policy_names, seeds=seeds)
     except ValueError as exc:
         print(f"[错误] {exc}", file=sys.stderr)
         return 1
 
     print("SpectrumFog · baseline 评测")
+    label = f"suite {suite.name} v{suite.version}" if suite is not None else "临时组合"
     print(
-        f"  {len(scenarios)} 个想定 × {len(policy_names)} 个策略 × "
-        f"{args.episodes} 局（同一 seed 下各策略共用同一串随机数）"
+        f"  {label}：{len(scenarios)} 个想定 × {len(policy_names)} 个策略 × "
+        f"{len(seeds)} 个种子（同一 seed 下各策略共用同一串随机数）"
     )
     print()
     print(format_table(rows))
@@ -636,6 +731,23 @@ def _bench(args: argparse.Namespace) -> int:
     if args.markdown is not None:
         _write_markdown(args.markdown, rows)
         print(f"  markdown → {args.markdown}")
+
+    if args.submit:
+        if suite is None:  # pragma: no cover - 参数组合已由 parser 保证
+            print("[错误] --submit 需要 --suite", file=sys.stderr)
+            return 1
+        submission_label = args.label or "unnamed"
+        payload = build_submission(suite, rows, label=submission_label)
+        digest = next(iter(payload["scenarios"].values()))[-8:]
+        target = args.submissions / f"{submission_label}-{suite.name}-v{suite.version}-{digest}.json"
+        try:
+            write_submission(target, payload)
+        except OSError as exc:
+            print(f"[错误] 写提交物失败：{exc}", file=sys.stderr)
+            return 1
+        print(f"  提交物 → {target}")
+        print(f"  自检：spectrumfog bench --verify {target}")
+
     print()
     print(_FOOTNOTE)
     return 0

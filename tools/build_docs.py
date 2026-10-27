@@ -48,6 +48,7 @@ PAGES: tuple[Page, ...] = (
     Page("docs/scenario.md", "scenario.html", "想定格式", "YAML schema"),
     Page("docs/metrics.md", "metrics.html", "指标", "Pd / CEP / 暴露"),
     Page("docs/bench.md", "bench.html", "评测", "Gym 环境与 baseline"),
+    Page("docs/leaderboard.md", "leaderboard.html", "排行榜", "同一把尺子下的提交"),
     Page("docs/web.md", "web.html", "网页数据包", "前端不算物理"),
     Page("PROJECT.md", "roadmap.html", "路线图", "里程碑与验收"),
 )

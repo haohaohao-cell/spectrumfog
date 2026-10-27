@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>排行榜 · SpectrumFog</title>
+<style>
+:root {
+  --ink: #2b2f36; --muted: #6b7178; --line: #e3e6ea; --bg: #f7f8fa;
+  --accent: #2f6fbf; --code-bg: #f2f4f7;
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); line-height: 1.7; }
+.layout { display: grid; grid-template-columns: 230px minmax(0, 880px); gap: 36px;
+          max-width: 1200px; margin: 0 auto; padding: 28px 24px 64px; }
+.side { position: sticky; top: 24px; align-self: start; font-size: 13.5px; }
+.side .brand { font-weight: 700; font-size: 15px; margin-bottom: 2px; }
+.side .sub { color: var(--muted); font-size: 12px; margin-bottom: 18px; }
+.side a { display: block; color: var(--ink); text-decoration: none; padding: 3px 0; }
+.side a:hover { color: var(--accent); }
+.side a.active { color: var(--accent); font-weight: 600; }
+.side .tag { color: var(--muted); font-size: 11.5px; padding-left: 0; }
+.side hr { border: 0; border-top: 1px solid var(--line); margin: 14px 0; }
+.side .back { color: var(--muted); font-size: 12.5px; }
+main { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 28px 34px 40px; }
+main > h1:first-child { margin-top: 0; }
+h1 { font-size: 26px; } h2 { font-size: 20px; margin-top: 34px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+h3 { font-size: 16.5px; margin-top: 26px; }
+a { color: var(--accent); }
+code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; font-size: 0.92em;
+       font-family: "Cascadia Mono", "Consolas", monospace; }
+pre { background: #f6f8fa; border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px;
+      overflow-x: auto; }
+pre code { background: none; padding: 0; font-size: 12.5px; line-height: 1.55; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; margin: 14px 0; }
+th, td { border: 1px solid var(--line); padding: 6px 9px; text-align: left; vertical-align: top; }
+th { background: #f6f8fa; }
+blockquote { margin: 14px 0; padding: 6px 16px; border-left: 3px solid var(--accent);
+             color: var(--muted); background: #f8fafc; }
+img { max-width: 100%; border-radius: 8px; border: 1px solid var(--line); }
+hr { border: 0; border-top: 1px solid var(--line); margin: 26px 0; }
+footer { max-width: 1200px; margin: 0 auto; padding: 0 24px 40px; color: var(--muted); font-size: 12px; }
+@media (max-width: 820px) {
+  .layout { grid-template-columns: 1fr; }
+  .side { position: static; }
+  main { padding: 20px; }
+}
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="side">
+    <div class="brand">SpectrumFog</div>
+    <div class="sub">频谱迷雾 · 文档</div>
+    <a class="nav" href="index.html">概览</a><span class="tag">从零到跑起来</span>
+    <a class="nav" href="physics.html">物理</a><span class="tag">公式、假设、缺口</span>
+    <a class="nav" href="design.html">设计取舍</a><span class="tag">为什么这么做</span>
+    <a class="nav" href="scenario.html">想定格式</a><span class="tag">YAML schema</span>
+    <a class="nav" href="metrics.html">指标</a><span class="tag">Pd / CEP / 暴露</span>
+    <a class="nav" href="bench.html">评测</a><span class="tag">Gym 环境与 baseline</span>
+    <a class="nav active" href="leaderboard.html">排行榜</a><span class="tag">同一把尺子下的提交</span>
+    <a class="nav" href="web.html">网页数据包</a><span class="tag">前端不算物理</span>
+    <a class="nav" href="roadmap.html">路线图</a><span class="tag">里程碑与验收</span>
+    <hr>
+    <a class="back" href="../index.html">← 打开交互演示</a>
+    <a class="back" href="https://github.com/haohaohao-cell/spectrumfog">GitHub 仓库</a>
+  </aside>
+  <main>
+<h1 id="_1">排行榜</h1>
+<p>同一把尺子：想定集合、种子、策略都固定（见 <code>scenarios/suite_v1.yaml</code>）。
+得分 = 各（想定 × 策略）平均奖励；奖励 = 干扰/压制有效 +1、被有效定位 −1。</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>提交</th>
+<th>得分</th>
+<th>想定数</th>
+<th>环境</th>
+<th>日期</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>baselines</code></td>
+<td>45.76</td>
+<td>6</td>
+<td>py3.12.6 / gym1.4.0</td>
+<td>2026-10-27</td>
+</tr>
+</tbody>
+</table>
+<h2 id="_2">怎么提交</h2>
+<pre><code class="language-bash">spectrumfog bench --suite scenarios/suite_v1.yaml --submit --label 你的名字
+spectrumfog bench --verify submissions/你的名字-*.json   # 自检
+</code></pre>
+<p>把生成的 JSON 放进 <code>submissions/</code> 提 PR。没有服务器：
+提交物自带每份想定文件的 sha256，<code>--verify</code> 一跑就知道结果是不是在<strong>当前</strong>想定上跑出来的。</p>
+  </main>
+</div>
+<footer>参数全部虚构 · 仅用于教学 / 研究仿真 · Apache-2.0 + CC BY 4.0</footer>
+</body>
+</html>

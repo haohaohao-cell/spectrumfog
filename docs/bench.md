@@ -98,6 +98,34 @@ scenario       policy             reward  jammed  exposed  Pd mean   J/S mean   
 **没有一个策略通吃**。这不是 bug：几份想定的能量差两个数量级，
 "最优打法"本来就不同——这也是为什么要有 benchmark，而不是一个调好的 demo。
 
+## 排行榜与提交（无服务器）
+
+排行榜只有在**同一批想定、同一组种子、同一套策略**下才可比。
+这把尺子固定在 [`scenarios/suite_v1.yaml`](../scenarios/suite_v1.yaml)：
+
+```yaml
+version: 1
+seeds: [0, 1, 2, 3, 4]
+policies: [random, always-jam, stealth]
+scenarios: [六个想定]
+```
+
+```bash
+spectrumfog bench --suite scenarios/suite_v1.yaml                 # 按尺子跑
+spectrumfog bench --suite scenarios/suite_v1.yaml --submit --label 你的名字
+spectrumfog bench --verify submissions/你的名字-*.json            # 自检
+spectrumfog bench --leaderboard submissions --write-md docs/leaderboard.md
+```
+
+提交物是自包含的 JSON：`suite` 版本、种子、策略、**每份想定文件的 sha256**、
+18 行结果、运行环境的 Python / numpy / gymnasium 版本。没有服务器，靠三件事保证可比：
+
+1. `--verify` 用当前文件重算 sha256，改一个数字就报"想定内容已改动"；
+2. 版本号写进提交物，换尺子必然对不上；
+3. 排名页由 `submissions/*.json` 生成，不手写。
+
+当前榜单：[docs/leaderboard.md](leaderboard.md)（文档站“排行榜”页）。
+
 ## 排行榜
 
 `--markdown out/leaderboard.md` 生成：

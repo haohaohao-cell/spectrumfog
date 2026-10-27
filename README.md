@@ -3,7 +3,7 @@
 [![ci](https://github.com/haohaohao-cell/spectrumfog/actions/workflows/ci.yml/badge.svg)](https://github.com/haohaohao-cell/spectrumfog/actions/workflows/ci.yml)
 [![pages](https://github.com/haohaohao-cell/spectrumfog/actions/workflows/pages.yml/badge.svg)](https://haohaohao-cell.github.io/spectrumfog/)
 
-**在线试用：[haohaohao-cell.github.io/spectrumfog](https://haohaohao-cell.github.io/spectrumfog/)**  ·  **文档站：[…/spectrumfog/docs](https://haohaohao-cell.github.io/spectrumfog/docs/)** —— 拖动干扰机，看雷达覆盖怎么塌。纯静态，无后端。
+**在线试用：[haohaohao-cell.github.io/spectrumfog](https://haohaohao-cell.github.io/spectrumfog/)**  ·  **文档站：[…/spectrumfog/docs](https://haohaohao-cell.github.io/spectrumfog/docs/)**  ·  **排行榜：[…/docs/leaderboard.html](https://haohaohao-cell.github.io/spectrumfog/docs/leaderboard.html)** —— 拖动干扰机，看雷达覆盖怎么塌。纯静态，无后端。
 
 **一个部分可观测的电磁对抗仿真平台**：双方都只能看到被干扰污染、被聚合过的频谱态势，
 必须靠定位与识别反推对手的辐射源在哪、是什么。
@@ -39,6 +39,9 @@ spectrumfog run scenarios/01_duel.yaml             # 静态曲线：烧穿 / Pd�
 | `spectrumfog export-web <yaml> -o data.json` | 前端数据包（T2 用，见下） |
 | `spectrumfog aar <jsonl>` | 复盘报告：时间线 + 暴露时长 + 归因（单页 HTML） |
 | `spectrumfog bench --all` | baseline 策略评测表（Gymnasium 环境，见下） |
+| `spectrumfog bench --suite … --submit` | 生成可校验的排行榜提交物 |
+| `spectrumfog bench --verify <json>` | 校验提交物与当前想定是否一致 |
+| `spectrumfog bench --leaderboard submissions` | 汇总排名 |
 
 ## 当前状态
 
@@ -57,7 +60,7 @@ spectrumfog run scenarios/01_duel.yaml             # 静态曲线：烧穿 / Pd�
 | AAR 复盘（时间线 · 暴露时长 · 留一法归因 · HTML 报告） | ✅ T3a |
 | Web 交互（拖动干扰机 → 热力图与曲线） | ✅ 线上已部署 |
 | Gymnasium 环境 + 3 个 baseline + 6 个想定 | ✅ T3b |
-| 文档站 · 公开排行榜 | ⬜ T3b 后半段 |
+| 文档站 + 提交物校验 + 排行榜 | ✅ T3b |
 
 ## 两个反直觉的结果（免得你以为算错了）
 

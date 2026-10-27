@@ -1,0 +1,27 @@
+# 想定集合 v1 —— 排行榜的"同一把尺子"
+#
+# 排行榜只有在**同一批想定、同一组种子、同一套策略**下才可比。
+# 这个文件就是那个基准：改它 = 换尺子，版本号必须跟着涨。
+#
+# 用法：
+#   spectrumfog bench --suite scenarios/suite_v1.yaml
+#   spectrumfog bench --suite scenarios/suite_v1.yaml --submit --label my-policy
+#   spectrumfog bench --verify submissions/my-policy-*.json
+
+version: 1
+name: spectrumfog-v1
+created: "2026-10-27"
+description: >-
+  六个想定覆盖：自屏蔽干扰、站距干扰、通信链路、多辐射源、三方机动、转发式诱饵。
+  每份想定固定 5 个种子，策略集合固定为三个 baseline。
+
+seeds: [0, 1, 2, 3, 4]
+policies: [random, always-jam, stealth]
+
+scenarios:
+  - scenarios/01_duel.yaml
+  - scenarios/02_standoff.yaml
+  - scenarios/03_triad.yaml
+  - scenarios/04_fog.yaml
+  - scenarios/05_mobile.yaml
+  - scenarios/06_decoy.yaml

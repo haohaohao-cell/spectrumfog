@@ -95,10 +95,17 @@ def run_bench(
     policy_names: Iterable[str] = ("random", "always-jam", "stealth"),
     *,
     episodes: int = 5,
+    seeds: Sequence[int] | None = None,
     pd_threshold: float = 0.5,
 ) -> list[BenchRow]:
-    """对每个 (想定, 策略) 跑 ``episodes`` 局，汇总成表。"""
-    if episodes < 1:
+    """对每个 (想定, 策略) 跑若干局，汇总成表。
+
+    ``seeds`` 给定时按它跑（排行榜要固定种子），否则用 ``range(episodes)``。
+    """
+    seed_list = tuple(seeds) if seeds is not None else tuple(range(episodes))
+    if not seed_list:
+        raise ValueError("种子列表不能为空")
+    if len(seed_list) < 1:
         raise ValueError(f"episodes 至少 1，收到 {episodes}")
 
     rows: list[BenchRow] = []
@@ -111,7 +118,7 @@ def run_bench(
                     seed=seed,
                     pd_threshold=pd_threshold,
                 )
-                for seed in range(episodes)
+                for seed in seed_list
             ]
             rewards = [result.reward for result in results]
             mean_reward = sum(rewards) / len(rewards)

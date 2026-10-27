@@ -10,7 +10,11 @@ from spectrumfog.engine.sim import Simulation
 from spectrumfog.model.scenario import load_scenario
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-SCENARIOS = sorted((REPO_ROOT / "scenarios").glob("*.yaml"))
+SCENARIOS = [
+    path
+    for path in sorted((REPO_ROOT / "scenarios").glob("*.yaml"))
+    if not path.stem.startswith("suite")
+]
 
 
 def test_catalog_has_at_least_five_scenarios():

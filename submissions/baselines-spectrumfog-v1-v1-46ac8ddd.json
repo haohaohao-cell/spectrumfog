@@ -1,0 +1,253 @@
+{
+  "schema": "spectrumfog.submission/1",
+  "label": "baselines",
+  "created": "2026-10-27T21:10:39+08:00",
+  "suite": {
+    "name": "spectrumfog-v1",
+    "version": 1,
+    "seeds": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "policies": [
+      "random",
+      "always-jam",
+      "stealth"
+    ]
+  },
+  "scenarios": {
+    "scenarios/01_duel.yaml": "sha256:4e0c1da7f6212cb6de6f2be9d55c2ee59ad22dc8325adfea3e996f0146ac8ddd",
+    "scenarios/02_standoff.yaml": "sha256:06bf3a2c3485db3a6b5977b6e7cbe7c2c48137f5a3d2c47ac1a15dd3de6ae414",
+    "scenarios/03_triad.yaml": "sha256:89ab04005465b6e87246f0cccf7cbc3097cce25a04c76fffda31fbb6190afcf0",
+    "scenarios/04_fog.yaml": "sha256:2ad186b1579a331736b7907af1c8811b2863b017af2939b10b5a95f06350b617",
+    "scenarios/05_mobile.yaml": "sha256:6bc701e5287668d1a29ddaae8ba464b1d9a9041ca627917ff3d67aead990b181",
+    "scenarios/06_decoy.yaml": "sha256:ebdc8830719f29978c731ed374ecde03b2fdda92bb868672dfa6c95c974596a6"
+  },
+  "score": 45.7607,
+  "rows": [
+    {
+      "scenario": "01_duel",
+      "policy": "always-jam",
+      "episodes": 5,
+      "reward_mean": 287.5999999999987,
+      "reward_std": 15.173661390713189,
+      "pd_mean": 1.1728868762992723e-06,
+      "jammed_fraction": 1.0,
+      "exposure_fraction": 0.5006666666666667,
+      "js_mean": 85.63151339197195,
+      "first_warning_s": 2.0
+    },
+    {
+      "scenario": "01_duel",
+      "policy": "random",
+      "episodes": 5,
+      "reward_mean": 232.4899999999997,
+      "reward_std": 16.41146428567536,
+      "pd_mean": 0.3087763020115285,
+      "jammed_fraction": 0.6763333333333333,
+      "exposure_fraction": 0.2786666666666667,
+      "js_mean": 52.33486579901616,
+      "first_warning_s": 4.8
+    },
+    {
+      "scenario": "01_duel",
+      "policy": "stealth",
+      "episodes": 5,
+      "reward_mean": 2.9400000000000013,
+      "reward_std": 2.29465465811307,
+      "pd_mean": 0.9174224748749076,
+      "jammed_fraction": 0.03833333333333334,
+      "exposure_fraction": 0.03266666666666666,
+      "js_mean": 52.52066154707613,
+      "first_warning_s": 46.6
+    },
+    {
+      "scenario": "02_standoff",
+      "policy": "stealth",
+      "episodes": 5,
+      "reward_mean": 4.036,
+      "reward_std": 2.0927073373981373,
+      "pd_mean": 0.9505746850693881,
+      "jammed_fraction": 0.06833333333333333,
+      "exposure_fraction": 0.03333333333333333,
+      "js_mean": 0.006654298448442314,
+      "first_warning_s": 94.0
+    },
+    {
+      "scenario": "02_standoff",
+      "policy": "random",
+      "episodes": 5,
+      "reward_mean": -1.7920000000000003,
+      "reward_std": 0.8924438357678312,
+      "pd_mean": 0.9556081466152826,
+      "jammed_fraction": 0.0,
+      "exposure_fraction": 0.005,
+      "js_mean": 0.003267504196034219,
+      "first_warning_s": 214.0
+    },
+    {
+      "scenario": "02_standoff",
+      "policy": "always-jam",
+      "episodes": 5,
+      "reward_mean": -3.599999999999999,
+      "reward_std": 0.7483314773547854,
+      "pd_mean": 0.9187230691830811,
+      "jammed_fraction": 0.0,
+      "exposure_fraction": 0.01,
+      "js_mean": 0.00608624858089236,
+      "first_warning_s": 118.0
+    },
+    {
+      "scenario": "03_triad",
+      "policy": "stealth",
+      "episodes": 5,
+      "reward_mean": 0.0,
+      "reward_std": 0.0,
+      "pd_mean": 0.8612927207773101,
+      "jammed_fraction": 0.0,
+      "exposure_fraction": 0.0,
+      "js_mean": 0.0,
+      "first_warning_s": null
+    },
+    {
+      "scenario": "03_triad",
+      "policy": "random",
+      "episodes": 5,
+      "reward_mean": -39.794,
+      "reward_std": 3.4798999985631736,
+      "pd_mean": 0.8612927207773101,
+      "jammed_fraction": 0.0,
+      "exposure_fraction": 0.6633333333333333,
+      "js_mean": 0.0,
+      "first_warning_s": 4.0
+    },
+    {
+      "scenario": "03_triad",
+      "policy": "always-jam",
+      "episodes": 5,
+      "reward_mean": -60.40000000000008,
+      "reward_std": 0.7483314773547909,
+      "pd_mean": 0.8612927207773101,
+      "jammed_fraction": 0.0,
+      "exposure_fraction": 0.9866666666666667,
+      "js_mean": 0.0,
+      "first_warning_s": 2.0
+    },
+    {
+      "scenario": "04_fog",
+      "policy": "always-jam",
+      "episodes": 5,
+      "reward_mean": 47.19999999999995,
+      "reward_std": 3.555277766926224,
+      "pd_mean": 1.3663589040904876e-06,
+      "jammed_fraction": 1.0,
+      "exposure_fraction": 0.19333333333333333,
+      "js_mean": 43.25456627697835,
+      "first_warning_s": 10.8
+    },
+    {
+      "scenario": "04_fog",
+      "policy": "random",
+      "episodes": 5,
+      "reward_mean": 37.40599999999999,
+      "reward_std": 3.5843136023512274,
+      "pd_mean": 0.30304339395481505,
+      "jammed_fraction": 0.6766666666666666,
+      "exposure_fraction": 0.043333333333333335,
+      "js_mean": 23.66762737591319,
+      "first_warning_s": 45.6
+    },
+    {
+      "scenario": "04_fog",
+      "policy": "stealth",
+      "episodes": 5,
+      "reward_mean": 1.332,
+      "reward_std": 1.466729695615385,
+      "pd_mean": 0.8841338219391496,
+      "jammed_fraction": 0.056666666666666664,
+      "exposure_fraction": 0.03333333333333333,
+      "js_mean": 46.85911346672655,
+      "first_warning_s": 47.6
+    },
+    {
+      "scenario": "05_mobile",
+      "policy": "always-jam",
+      "episodes": 5,
+      "reward_mean": 82.39999999999998,
+      "reward_std": 2.2271057451320204,
+      "pd_mean": 0.0017878170787603447,
+      "jammed_fraction": 1.0,
+      "exposure_fraction": 0.06444444444444444,
+      "js_mean": 1.5249637265505032,
+      "first_warning_s": 32.8
+    },
+    {
+      "scenario": "05_mobile",
+      "policy": "random",
+      "episodes": 5,
+      "reward_mean": 55.14,
+      "reward_std": 5.502126861496382,
+      "pd_mean": 0.33980291268090596,
+      "jammed_fraction": 0.6622222222222222,
+      "exposure_fraction": 0.04,
+      "js_mean": 0.7637769834985431,
+      "first_warning_s": 55.6
+    },
+    {
+      "scenario": "05_mobile",
+      "policy": "stealth",
+      "episodes": 5,
+      "reward_mean": 0.5279999999999999,
+      "reward_std": 0.4800999895855029,
+      "pd_mean": 0.9512686627176274,
+      "jammed_fraction": 0.04,
+      "exposure_fraction": 0.03333333333333333,
+      "js_mean": 1.35260260467361,
+      "first_warning_s": 88.4
+    },
+    {
+      "scenario": "06_decoy",
+      "policy": "stealth",
+      "episodes": 5,
+      "reward_mean": 60.0,
+      "reward_std": 0.0,
+      "pd_mean": 0.3628629228384556,
+      "jammed_fraction": 1.0,
+      "exposure_fraction": 0.0,
+      "js_mean": 0.0,
+      "first_warning_s": null
+    },
+    {
+      "scenario": "06_decoy",
+      "policy": "random",
+      "episodes": 5,
+      "reward_mean": 59.40599999999999,
+      "reward_std": 0.057480431452801274,
+      "pd_mean": 0.11888407594649202,
+      "jammed_fraction": 1.0,
+      "exposure_fraction": 0.0,
+      "js_mean": 0.5926041452852572,
+      "first_warning_s": null
+    },
+    {
+      "scenario": "06_decoy",
+      "policy": "always-jam",
+      "episodes": 5,
+      "reward_mean": 58.79999999999993,
+      "reward_std": 7.105427357601002e-15,
+      "pd_mean": 0.0004703010325808295,
+      "jammed_fraction": 1.0,
+      "exposure_fraction": 0.0,
+      "js_mean": 1.1660064459691177,
+      "first_warning_s": null
+    }
+  ],
+  "environment": {
+    "python": "3.12.6",
+    "numpy": "1.26.4",
+    "gymnasium": "1.4.0"
+  }
+}

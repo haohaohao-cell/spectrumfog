@@ -59,6 +59,7 @@ footer { max-width: 1200px; margin: 0 auto; padding: 0 24px 40px; color: var(--m
     <a class="nav" href="scenario.html">想定格式</a><span class="tag">YAML schema</span>
     <a class="nav" href="metrics.html">指标</a><span class="tag">Pd / CEP / 暴露</span>
     <a class="nav" href="bench.html">评测</a><span class="tag">Gym 环境与 baseline</span>
+    <a class="nav" href="leaderboard.html">排行榜</a><span class="tag">同一把尺子下的提交</span>
     <a class="nav" href="web.html">网页数据包</a><span class="tag">前端不算物理</span>
     <a class="nav" href="roadmap.html">路线图</a><span class="tag">里程碑与验收</span>
     <hr>
@@ -69,7 +70,7 @@ footer { max-width: 1200px; margin: 0 auto; padding: 0 24px 40px; color: var(--m
 <p>﻿# SpectrumFog / 频谱迷雾</p>
 <p><a href="https://github.com/haohaohao-cell/spectrumfog/actions/workflows/ci.yml"><img alt="ci" src="https://github.com/haohaohao-cell/spectrumfog/actions/workflows/ci.yml/badge.svg"></a>
 <a href="https://haohaohao-cell.github.io/spectrumfog/"><img alt="pages" src="https://github.com/haohaohao-cell/spectrumfog/actions/workflows/pages.yml/badge.svg"></a></p>
-<p><strong>在线试用：<a href="https://haohaohao-cell.github.io/spectrumfog/">haohaohao-cell.github.io/spectrumfog</a></strong>  ·  <strong>文档站：<a href="https://haohaohao-cell.github.io/spectrumfog/docs/">…/spectrumfog/docs</a></strong> —— 拖动干扰机，看雷达覆盖怎么塌。纯静态，无后端。</p>
+<p><strong>在线试用：<a href="https://haohaohao-cell.github.io/spectrumfog/">haohaohao-cell.github.io/spectrumfog</a></strong>  ·  <strong>文档站：<a href="https://haohaohao-cell.github.io/spectrumfog/docs/">…/spectrumfog/docs</a></strong>  ·  <strong>排行榜：<a href="https://haohaohao-cell.github.io/spectrumfog/docs/leaderboard.html">…/docs/leaderboard.html</a></strong> —— 拖动干扰机，看雷达覆盖怎么塌。纯静态，无后端。</p>
 <p><strong>一个部分可观测的电磁对抗仿真平台</strong>：双方都只能看到被干扰污染、被聚合过的频谱态势，
 必须靠定位与识别反推对手的辐射源在哪、是什么。</p>
 <p>不是"算杀伤"的兵棋，是"算认知"的环境。</p>
@@ -125,6 +126,18 @@ spectrumfog run scenarios/01_duel.yaml             # 静态曲线：烧穿 / Pd�
 <td><code>spectrumfog bench --all</code></td>
 <td>baseline 策略评测表（Gymnasium 环境，见下）</td>
 </tr>
+<tr>
+<td><code>spectrumfog bench --suite … --submit</code></td>
+<td>生成可校验的排行榜提交物</td>
+</tr>
+<tr>
+<td><code>spectrumfog bench --verify &lt;json&gt;</code></td>
+<td>校验提交物与当前想定是否一致</td>
+</tr>
+<tr>
+<td><code>spectrumfog bench --leaderboard submissions</code></td>
+<td>汇总排名</td>
+</tr>
 </tbody>
 </table>
 <h2 id="_2">当前状态</h2>
@@ -179,8 +192,8 @@ spectrumfog run scenarios/01_duel.yaml             # 静态曲线：烧穿 / Pd�
 <td>✅ T3b</td>
 </tr>
 <tr>
-<td>文档站 · 公开排行榜</td>
-<td>⬜ T3b 后半段</td>
+<td>文档站 + 提交物校验 + 排行榜</td>
+<td>✅ T3b</td>
 </tr>
 </tbody>
 </table>

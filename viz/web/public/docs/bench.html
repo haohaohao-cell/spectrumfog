@@ -59,6 +59,7 @@ footer { max-width: 1200px; margin: 0 auto; padding: 0 24px 40px; color: var(--m
     <a class="nav" href="scenario.html">想定格式</a><span class="tag">YAML schema</span>
     <a class="nav" href="metrics.html">指标</a><span class="tag">Pd / CEP / 暴露</span>
     <a class="nav active" href="bench.html">评测</a><span class="tag">Gym 环境与 baseline</span>
+    <a class="nav" href="leaderboard.html">排行榜</a><span class="tag">同一把尺子下的提交</span>
     <a class="nav" href="web.html">网页数据包</a><span class="tag">前端不算物理</span>
     <a class="nav" href="roadmap.html">路线图</a><span class="tag">里程碑与验收</span>
     <hr>
@@ -191,7 +192,28 @@ spectrumfog bench --all --out out/bench.json --markdown out/leaderboard.md
 </ul>
 <p><strong>没有一个策略通吃</strong>。这不是 bug：几份想定的能量差两个数量级，
 "最优打法"本来就不同——这也是为什么要有 benchmark，而不是一个调好的 demo。</p>
-<h2 id="_4">排行榜</h2>
+<h2 id="_4">排行榜与提交（无服务器）</h2>
+<p>排行榜只有在<strong>同一批想定、同一组种子、同一套策略</strong>下才可比。
+这把尺子固定在 <a href="../scenarios/suite_v1.yaml"><code>scenarios/suite_v1.yaml</code></a>：</p>
+<pre><code class="language-yaml">version: 1
+seeds: [0, 1, 2, 3, 4]
+policies: [random, always-jam, stealth]
+scenarios: [六个想定]
+</code></pre>
+<pre><code class="language-bash">spectrumfog bench --suite scenarios/suite_v1.yaml                 # 按尺子跑
+spectrumfog bench --suite scenarios/suite_v1.yaml --submit --label 你的名字
+spectrumfog bench --verify submissions/你的名字-*.json            # 自检
+spectrumfog bench --leaderboard submissions --write-md docs/leaderboard.md
+</code></pre>
+<p>提交物是自包含的 JSON：<code>suite</code> 版本、种子、策略、<strong>每份想定文件的 sha256</strong>、
+18 行结果、运行环境的 Python / numpy / gymnasium 版本。没有服务器，靠三件事保证可比：</p>
+<ol>
+<li><code>--verify</code> 用当前文件重算 sha256，改一个数字就报"想定内容已改动"；</li>
+<li>版本号写进提交物，换尺子必然对不上；</li>
+<li>排名页由 <code>submissions/*.json</code> 生成，不手写。</li>
+</ol>
+<p>当前榜单：<a href="leaderboard.html">docs/leaderboard.md</a>（文档站“排行榜”页）。</p>
+<h2 id="_5">排行榜</h2>
 <p><code>--markdown out/leaderboard.md</code> 生成：</p>
 <table>
 <thead>
@@ -219,7 +241,7 @@ spectrumfog bench --all --out out/bench.json --markdown out/leaderboard.md
 </table>
 <p>现在只有本地排行榜（自己跑、自己贴表）。公开提交（带签名的 JSON + PR）属于 T3b 的后半段，
 还没做——因为那需要先固定想定集合的版本号，否则表不可比。</p>
-<h2 id="_5">加一个策略</h2>
+<h2 id="_6">加一个策略</h2>
 <p>实现两个方法即可：</p>
 <pre><code class="language-python">class MyPolicy:
     name = &quot;my-policy&quot;
@@ -230,7 +252,7 @@ spectrumfog bench --all --out out/bench.json --markdown out/leaderboard.md
 </code></pre>
 <p>然后 <code>spectrumfog bench --all --policies random,always-jam,stealth,my-policy</code>
 （策略要先注册进 <code>bench/policies.py</code> 的 <code>POLICIES</code>）。</p>
-<h2 id="_6">已知限制</h2>
+<h2 id="_7">已知限制</h2>
 <ol>
 <li><strong>单智能体</strong>：只控制红方干扰机；蓝方（雷达 + ESM 星座）是环境的一部分。</li>
 <li><strong>动作离散</strong>：没有连续功率/航向；也没做动作屏蔽（不合法的动作不会出现，但也没优化）。</li>
