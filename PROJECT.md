@@ -332,7 +332,7 @@ T1 一结束就发布（README 换头图 + GIF、仓库公开），不等 T2。
 - [x] 选题与规格确定
 - [x] 路线对齐（四角色 × T0–T3b）
 - [x] T0 物理闭环（2026-10-27：`spectrumfog run scenarios/01_duel.yaml` 出三图，56 项单测）
-- [ ] T1 2D 动态 + **首次发布**（动态已通：`sim --gif` 出 10 s 动画 + 确定性 replay；仓库尚未公开）
-- [ ] T2 Web 交互（已建：`export-web` 数据包 + Vite/React 交互页，构建与单测通过；浏览器手测待确认）
+- [x] T1 2D 动态 + **首次发布**（2026-10-27：`sim --gif` 出 10 s 动画 + 确定性 replay；仓库已公开）
+- [x] T2 Web 交互（2026-10-27：`export-web` 数据包 + Vite/React 交互页 + Pages 上线）
 - [ ] T3a AAR 复盘分析
 - [ ] T3b 平台化（可选分支）

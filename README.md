@@ -40,8 +40,8 @@ spectrumfog run scenarios/01_duel.yaml             # 静态曲线：烧穿 / Pd�
 
 ## 当前状态
 
-**T1 — 2D 动态已完成**（97 项单测通过）。首次发布（仓库公开 + 渠道）还没做，见
-[PROJECT.md](PROJECT.md) §11 的发布闸门。
+**T2 — Web 交互已上线**（106 项 Python 单测 + 16 项前端单测，CI 全绿）。
+在线页面：[haohaohao-cell.github.io/spectrumfog](https://haohaohao-cell.github.io/spectrumfog/)
 
 | 部分 | 状态 |
 |---|---|
