@@ -1,5 +1,10 @@
 # SpectrumFog / 频谱迷雾
 
+[![ci](https://github.com/haohaohao-cell/spectrumfog/actions/workflows/ci.yml/badge.svg)](https://github.com/haohaohao-cell/spectrumfog/actions/workflows/ci.yml)
+[![pages](https://github.com/haohaohao-cell/spectrumfog/actions/workflows/pages.yml/badge.svg)](https://haohaohao-cell.github.io/spectrumfog/)
+
+**在线试用：[haohaohao-cell.github.io/spectrumfog](https://haohaohao-cell.github.io/spectrumfog/)** —— 拖动干扰机，看雷达覆盖怎么塌。纯静态，无后端。
+
 **一个部分可观测的电磁对抗仿真平台**：双方都只能看到被干扰污染、被聚合过的频谱态势，
 必须靠定位与识别反推对手的辐射源在哪、是什么。
 

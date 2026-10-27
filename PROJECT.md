@@ -283,7 +283,7 @@ objectives:
 语言     Python 3.11+
 依赖     pydantic · pyyaml · numpy · matplotlib · pytest
 可选     gymnasium · networkx · pint
-前端     Vite + React + TypeScript + deck.gl / ECharts
+前端     Vite + React + TypeScript + canvas 自绘（deck.gl 留到 T3b 的大规模轨迹）
 部署     GitHub Pages（纯静态）/ PyPI（库）
 协议     Apache-2.0（代码）+ CC-BY-4.0（文档与想定）
 ```
