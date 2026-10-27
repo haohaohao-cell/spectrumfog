@@ -318,7 +318,7 @@ Physics write-up: https://github.com/haohaohao-cell/spectrumfog/blob/main/docs/p
 
 ```
 几个可能被问到的点，先答了：
-1. 为什么 1 W 干扰机就能压制？因为 v1 没有处理增益（脉压、相干积累），
+1. 为什么 1 W 干扰机就能压制？因为这个模型没有处理增益（脉压、相干积累），
    落进 2 MHz 接收机的只有 20 mW。这是已知缺口，不是"战果"。
 2. 为什么数据这么整齐？参数全是虚构的，只为了让曲线可读。
 3. 代码怎么读？docs/physics.md 有公式和缺口清单，docs/design.md 讲取舍。
@@ -381,7 +381,7 @@ Physics write-up: https://github.com/haohaohao-cell/spectrumfog/blob/main/docs/p
 | 会被问 | 怎么答（别防御，给数） |
 |---|---|
 | "这不是军事软件吗？" | 定位是 educational / research simulation；参数全虚构，不含任何真实装备数据；Apache-2.0 公开可审。 |
-| "1 W 干扰机就能压制 150 kW 雷达？假的吧" | 对，看着不合理，因为 v1 没有处理增益。落进 2 MHz 的只有 20 mW，而 12 km 处回波是 -67 dBm。缺口写在 docs/physics.md §7 第 1 条，加 20 dB 处理增益的话烧穿距离会涨约 10 倍。 |
+| "1 W 干扰机就能压制 150 kW 雷达？假的吧" | 对，看着不合理，因为这个模型没有处理增益。落进 2 MHz 的只有 20 mW，而 12 km 处回波是 -67 dBm。缺口写在 docs/physics.md §7 第 1 条，加 20 dB 处理增益的话烧穿距离会涨约 10 倍。 |
 | "Pd 公式太粗糙" | 用的 Swerling I 单脉冲闭式，是为了能反解检测距离。它对 SNR 偏钝（Pfa=1e-6 时要 21 dB 才到 0.9），这是选择的代价，不是笔误。 |
 | "为什么不直接调现成的雷达库？" | 这个项目的卖点是"能逐行审的物理"和确定性 replay，引入第三方物理就没法保证了。 |
 | "Python 跑得动吗？" | 热路径是闭式解，600 tick 的想定 1.3 s；向量化，不写逐点循环。 |
