@@ -334,5 +334,5 @@ T1 一结束就发布（README 换头图 + GIF、仓库公开），不等 T2。
 - [x] T0 物理闭环（2026-10-27：`spectrumfog run scenarios/01_duel.yaml` 出三图，56 项单测）
 - [x] T1 2D 动态 + **首次发布**（2026-10-27：`sim --gif` 出 10 s 动画 + 确定性 replay；仓库已公开）
 - [x] T2 Web 交互（2026-10-27：`export-web` 数据包 + Vite/React 交互页 + Pages 上线）
-- [ ] T3a AAR 复盘分析
+- [x] T3a AAR 复盘分析（2026-10-27：`spectrumfog aar` 出时间线 + 暴露时长 + 留一法归因 + 单页 HTML）
 - [ ] T3b 平台化（可选分支）
