@@ -79,8 +79,12 @@ spectrumfog/
 ├── PROJECT.md
 ├── docs/
 │   ├── physics.md          公式、假设、单位
+│   ├── design.md           建模取舍
 │   ├── scenario.md         YAML schema
-│   └── metrics.md          指标定义
+│   ├── metrics.md          指标定义
+│   ├── web.md              前端数据包
+│   ├── bench.md            Gym 环境与评测
+│   └── launch.md           发布文案
 ├── src/spectrumfog/
 │   ├── units.py            SI 常量 + 单位换算
 │   ├── physics/
@@ -335,4 +339,5 @@ T1 一结束就发布（README 换头图 + GIF、仓库公开），不等 T2。
 - [x] T1 2D 动态 + **首次发布**（2026-10-27：`sim --gif` 出 10 s 动画 + 确定性 replay；仓库已公开）
 - [x] T2 Web 交互（2026-10-27：`export-web` 数据包 + Vite/React 交互页 + Pages 上线）
 - [x] T3a AAR 复盘分析（2026-10-27：`spectrumfog aar` 出时间线 + 暴露时长 + 留一法归因 + 单页 HTML）
-- [ ] T3b 平台化（可选分支）
+- [ ] T3b 平台化（进行中：Gymnasium 环境 + 3 个 baseline + `bench --all` 已通；
+      还差 3 个想定、文档站、公开排行榜）

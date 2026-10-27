@@ -553,7 +553,104 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="PLATFORM_ID",
         help="被定位的平台（默认取 localize objective）",
     )
+
+    bench = subparsers.add_parser(
+        "bench", help="跑 baseline 策略的评测，输出可比表格（T3b）"
+    )
+    bench.add_argument("--all", action="store_true", help="跑 scenarios/ 下所有想定")
+    bench.add_argument(
+        "--scenario", type=Path, action="append", default=None, help="指定想定（可重复）"
+    )
+    bench.add_argument("--episodes", type=int, default=5, help="每个组合跑几局（默认 5）")
+    bench.add_argument(
+        "--policies",
+        default="random,always-jam,stealth",
+        help="逗号分隔的策略名（默认 random,always-jam,stealth）",
+    )
+    bench.add_argument(
+        "-o", "--out", type=Path, default=None, help="把结果写成 JSON"
+    )
+    bench.add_argument(
+        "--markdown", type=Path, default=None, help="把结果写成 markdown 排行榜"
+    )
     return parser
+
+
+# --- bench：baseline 评测 -----------------------------------------------------
+
+
+def _bench(args: argparse.Namespace) -> int:
+    try:
+        from .bench.policies import make_policy  # noqa: F401  (提前暴露 gymnasium 缺失)
+        from .bench.runner import format_table, run_bench, write_json
+    except ImportError as exc:  # pragma: no cover - 取决于环境
+        print(
+            f"[错误] bench 需要 gymnasium（{exc}）。装：pip install -e \".[bench]\"",
+            file=sys.stderr,
+        )
+        return 1
+
+    if args.all:
+        paths = sorted(Path("scenarios").glob("*.yaml"))
+    elif args.scenario:
+        paths = list(args.scenario)
+    else:
+        print("[错误] 请给 --all 或 --scenario <path>", file=sys.stderr)
+        return 2
+
+    scenarios = []
+    for path in paths:
+        try:
+            scenarios.append(load_scenario(path))
+        except (FileNotFoundError, ValueError) as exc:
+            print(f"[错误] {exc}", file=sys.stderr)
+            return 1
+    if not scenarios:
+        print("[错误] 没有找到任何想定", file=sys.stderr)
+        return 1
+
+    policy_names = [name.strip() for name in args.policies.split(",") if name.strip()]
+    try:
+        rows = run_bench(scenarios, policy_names, episodes=args.episodes)
+    except ValueError as exc:
+        print(f"[错误] {exc}", file=sys.stderr)
+        return 1
+
+    print("SpectrumFog · baseline 评测")
+    print(
+        f"  {len(scenarios)} 个想定 × {len(policy_names)} 个策略 × "
+        f"{args.episodes} 局（同一 seed 下各策略共用同一串随机数）"
+    )
+    print()
+    print(format_table(rows))
+    print()
+
+    if args.out is not None:
+        write_json(args.out, rows)
+        print(f"  JSON → {args.out}")
+    if args.markdown is not None:
+        _write_markdown(args.markdown, rows)
+        print(f"  markdown → {args.markdown}")
+    print()
+    print(_FOOTNOTE)
+    return 0
+
+
+def _write_markdown(path: Path, rows) -> None:
+    """排行榜：按 (想定, 奖励) 排序的 markdown 表。"""
+    lines = [
+        "| 想定 | 策略 | 奖励（均值±标准差） | 干扰有效率 | 暴露率 | Pd 均值 | 首告警 |",
+        "|---|---|---|---|---|---|---|",
+    ]
+    for row in rows:
+        warning = "—" if row.first_warning_s is None else f"{row.first_warning_s:.0f} s"
+        lines.append(
+            f"| {row.scenario} | `{row.policy}` | {row.reward_mean:.1f} ± "
+            f"{row.reward_std:.0f} | {row.jammed_fraction * 100:.0f}% | "
+            f"{row.exposure_fraction * 100:.0f}% | {row.pd_mean:.3f} | {warning} |"
+        )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -569,6 +666,8 @@ def main(argv: list[str] | None = None) -> int:
         return _export_web(args)
     if args.command == "aar":
         return _aar(args)
+    if args.command == "bench":
+        return _bench(args)
     parser.error(f"未知子命令：{args.command}")
     return 2
 

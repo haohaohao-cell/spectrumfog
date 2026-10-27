@@ -1,4 +1,4 @@
-name: ci
+﻿name: ci
 
 on:
   push:
@@ -16,7 +16,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: install
-        run: pip install -e ".[dev]"
+        run: pip install -e ".[dev,bench]"
       - name: test
         run: python -m pytest -q
 
@@ -39,3 +39,4 @@ jobs:
       - name: build
         working-directory: viz/web
         run: npm run build
+

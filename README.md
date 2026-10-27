@@ -38,6 +38,7 @@ spectrumfog run scenarios/01_duel.yaml             # 静态曲线：烧穿 / Pd�
 | `spectrumfog run <yaml>` | 三张静态图 + 链路指标 |
 | `spectrumfog export-web <yaml> -o data.json` | 前端数据包（T2 用，见下） |
 | `spectrumfog aar <jsonl>` | 复盘报告：时间线 + 暴露时长 + 归因（单页 HTML） |
+| `spectrumfog bench --all` | baseline 策略评测表（Gymnasium 环境，见下） |
 
 ## 当前状态
 
@@ -55,6 +56,8 @@ spectrumfog run scenarios/01_duel.yaml             # 静态曲线：烧穿 / Pd�
 | 观测（AOA/TOA/功率测量）+ 融合定位 + 虚假目标 | ✅ T3a |
 | AAR 复盘（时间线 · 暴露时长 · 留一法归因 · HTML 报告） | ✅ T3a |
 | Web 交互（拖动干扰机 → 热力图与曲线） | ✅ 线上已部署 |
+| Gymnasium 环境 + 3 个 baseline + 评测表 | ✅ T3b（想定 2/5、公开榜单待做） |
+| 5 个想定 · 文档站 · 公开排行榜 | ⬜ T3b 后半段 |
 
 ## 两个反直觉的结果（免得你以为算错了）
 
@@ -124,6 +127,27 @@ spectrumfog aar out/01_duel.jsonl                    # 出 out/01_duel_aar.html
 
 ![AAR 报告](docs/images/aar_report.png)
 
+## Baseline 评测（T3b）
+
+`spectrumfog bench --all` 把想定变成 Gymnasium 决策问题，让三个策略各跑几局：
+
+```
+scenario       policy             reward  jammed  exposed  Pd mean   J/S mean     首告警[s]
+01_duel        always-jam     289.3± 18    100%      50%    0.000      85.63          2
+01_duel        random         221.3± 11     67%      29%    0.314      59.61          6
+01_duel        stealth          3.2±  2      4%       3%    0.917      53.28         46
+02_standoff    stealth          4.5±  3      7%       3%    0.948       0.01         94
+02_standoff    random          -1.5±  0      0%       0%    0.957       0.00        206
+02_standoff    always-jam      -3.1±  0      0%       1%    0.919       0.01        127
+```
+
+读法：90 W 的 `01_duel` 里蛮干就能赢（30 km 处 Pd 已压到 1e-6，靠近纯属浪费）；
+只有 1 W 的 `02_standoff` 里必须贴脸，但贴脸就被三站交汇——`stealth` 打一下就跑，
+成功率 7%。**没有一个策略通吃**，这正是要 benchmark 而不是调一个 demo 的原因。
+
+环境契约（观测 6 维、动作 15 个、奖励设计、部分可观测落在哪）见 [docs/bench.md](docs/bench.md)。
+三个 baseline 只吃观测，不读环境私有状态。
+
 ## 怎么读这份代码
 
 ```
@@ -131,9 +155,12 @@ src/spectrumfog/
   units.py        SI 常量 + 单位换算（dB/km/MHz 只活在边界上）
   physics/        radar.py · propagation.py · comms.py —— 纯 numpy，无状态
   model/          scenario.py · platform.py · emitter.py · sensor.py —— pydantic
-  engine/         clock.py（固定步长）· sim.py（主循环）
+  engine/         clock.py（固定步长）· sim.py（主循环）· detect.py（ESM 观测）· fusion.py（定位）
+  bench/          env.py（Gym 环境）· policies.py（3 个 baseline）· runner.py（评测）
+  aar.py          复盘：时间线 + 暴露时长 + 归因
+  metrics.py      CEP / 暴露时长
   replay.py       JSONL 读写；帧聚合
-  cli.py          run / sim / animate / export-web / aar
+  cli.py          run / sim / animate / export-web / aar / bench
 viz/static/
   plot.py         matplotlib 静态图
   animate.py      俯视动画（只读 replay，不回写）
@@ -143,7 +170,8 @@ scenarios/
 tests/              136 项：物理、想定、时钟、回放、确定性、动画、融合、AAR、Web 数据包、CLI
 viz/web/src/        16 项前端单测（查表解码、插值、首屏渲染）
 docs/               physics.md（公式与假设）· design.md（建模取舍）· scenario.md（YAML schema）
-                    metrics.md（指标定义）· web.md（前端数据包）· launch.md（发布文案）
+                    metrics.md（指标定义）· web.md（前端数据包）· bench.md（Gym 与评测）
+                    launch.md（发布文案）
 ```
 
 三条硬约束（[PROJECT.md](PROJECT.md) §2，改之前先想清楚）：
