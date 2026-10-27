@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SpectrumFog / 频谱迷雾 — 项目规格书 · SpectrumFog</title>
+<style>
+:root {
+  --ink: #2b2f36; --muted: #6b7178; --line: #e3e6ea; --bg: #f7f8fa;
+  --accent: #2f6fbf; --code-bg: #f2f4f7;
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); line-height: 1.7; }
+.layout { display: grid; grid-template-columns: 230px minmax(0, 880px); gap: 36px;
+          max-width: 1200px; margin: 0 auto; padding: 28px 24px 64px; }
+.side { position: sticky; top: 24px; align-self: start; font-size: 13.5px; }
+.side .brand { font-weight: 700; font-size: 15px; margin-bottom: 2px; }
+.side .sub { color: var(--muted); font-size: 12px; margin-bottom: 18px; }
+.side a { display: block; color: var(--ink); text-decoration: none; padding: 3px 0; }
+.side a:hover { color: var(--accent); }
+.side a.active { color: var(--accent); font-weight: 600; }
+.side .tag { color: var(--muted); font-size: 11.5px; padding-left: 0; }
+.side hr { border: 0; border-top: 1px solid var(--line); margin: 14px 0; }
+.side .back { color: var(--muted); font-size: 12.5px; }
+main { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 28px 34px 40px; }
+main > h1:first-child { margin-top: 0; }
+h1 { font-size: 26px; } h2 { font-size: 20px; margin-top: 34px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+h3 { font-size: 16.5px; margin-top: 26px; }
+a { color: var(--accent); }
+code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; font-size: 0.92em;
+       font-family: "Cascadia Mono", "Consolas", monospace; }
+pre { background: #f6f8fa; border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px;
+      overflow-x: auto; }
+pre code { background: none; padding: 0; font-size: 12.5px; line-height: 1.55; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; margin: 14px 0; }
+th, td { border: 1px solid var(--line); padding: 6px 9px; text-align: left; vertical-align: top; }
+th { background: #f6f8fa; }
+blockquote { margin: 14px 0; padding: 6px 16px; border-left: 3px solid var(--accent);
+             color: var(--muted); background: #f8fafc; }
+img { max-width: 100%; border-radius: 8px; border: 1px solid var(--line); }
+hr { border: 0; border-top: 1px solid var(--line); margin: 26px 0; }
+footer { max-width: 1200px; margin: 0 auto; padding: 0 24px 40px; color: var(--muted); font-size: 12px; }
+@media (max-width: 820px) {
+  .layout { grid-template-columns: 1fr; }
+  .side { position: static; }
+  main { padding: 20px; }
+}
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="side">
+    <div class="brand">SpectrumFog</div>
+    <div class="sub">频谱迷雾 · 文档</div>
+    <a class="nav" href="index.html">概览</a><span class="tag">从零到跑起来</span>
+    <a class="nav" href="physics.html">物理</a><span class="tag">公式、假设、缺口</span>
+    <a class="nav" href="design.html">设计取舍</a><span class="tag">为什么这么做</span>
+    <a class="nav" href="scenario.html">想定格式</a><span class="tag">YAML schema</span>
+    <a class="nav" href="metrics.html">指标</a><span class="tag">Pd / CEP / 暴露</span>
+    <a class="nav" href="bench.html">评测</a><span class="tag">Gym 环境与 baseline</span>
+    <a class="nav" href="web.html">网页数据包</a><span class="tag">前端不算物理</span>
+    <a class="nav active" href="roadmap.html">路线图</a><span class="tag">里程碑与验收</span>
+    <hr>
+    <a class="back" href="../index.html">← 打开交互演示</a>
+    <a class="back" href="https://github.com/haohaohao-cell/spectrumfog">GitHub 仓库</a>
+  </aside>
+  <main>
+<h1 id="spectrumfog">SpectrumFog / 频谱迷雾 — 项目规格书</h1>
+<blockquote>
+<p>本文件是项目的唯一事实来源（single source of truth）。
+新对话开始时，先读本文件，从"里程碑"的当前档位继续。</p>
+</blockquote>
+<hr>
+<h2 id="1">1. 一句话定位</h2>
+<p><strong>一个部分可观测的电磁对抗仿真与博弈平台</strong>：双方都只能看到被干扰污染、被聚合过的频谱态势，必须靠定位与识别反推对手的辐射源在哪、是什么、想干什么。</p>
+<p>不是"算杀伤"的兵棋，是"算认知"的环境。</p>
+<h3 id="_1">简历定位（对外一律用这句，不要提"游戏"和"军事"）</h3>
+<blockquote>
+<p>部分可观测多智能体仿真平台，含确定性回放内核、Gymnasium 接口与 Web 可视化。</p>
+</blockquote>
+<hr>
+<h3 id="_2">项目组合（四个角色，别混为一谈）</h3>
+<table>
+<thead>
+<tr>
+<th>角色</th>
+<th>是什么</th>
+<th>落在哪一档</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>主项目</strong></td>
+<td>频谱迷雾内核 + 玩法</td>
+<td>T0 → T2</td>
+<td>唯一的必做主线</td>
+</tr>
+<tr>
+<td><strong>内嵌件</strong></td>
+<td>AAR 复盘分析</td>
+<td>T3a</td>
+<td>复用 replay 日志，是 T3b 的前置</td>
+</tr>
+<tr>
+<td><strong>门面</strong></td>
+<td>频谱瀑布（可视化）</td>
+<td>合并进 T1 / T2</td>
+<td>不独立成项，但 T1 后必须发布</td>
+</tr>
+<tr>
+<td><strong>学术件</strong></td>
+<td>EW-Gym 接口</td>
+<td>T3b（<strong>可选分支</strong>）</td>
+<td>要论文 / 进实验室才做，不是必经项</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>原则：<strong>不做六个项目，做一个内核、三个面。</strong> 上表四行是唯一允许的范围，超出即砍。</p>
+</blockquote>
+<hr>
+<h2 id="2">2. 已冻结的设计决策</h2>
+<p>这六条<strong>不再讨论</strong>，除非出现颠覆性问题：</p>
+<ol>
+<li><strong>确定性优先</strong>：固定步长 + seeded RNG + 事件日志 → 任意 replay 可逐帧复现。这是学术可信度的地基，妥协一次就全废。</li>
+<li><strong>引擎与表现严格分离</strong>：<code>core</code> 不 import 任何 UI 库；<code>viz</code> 只读 replay 文件，不回写。</li>
+<li><strong>一个内核，三个面</strong>：CLI（实验）、Web（传播）、Gym（研究）。同一份物理，不许前后端各写一套。</li>
+<li><strong>只用公开教科书物理</strong>（Skolnik 雷达方程、Friis、ITU-R 传播），参数全虚构。</li>
+<li><strong>观测是核心资产</strong>：不做"看得见/看不见"的二元判定，而做概率化测量 + 融合 + 虚假目标。这是本项目和所有竞品的分界线。</li>
+<li><strong>单人可完成</strong>：v1 不做联网对战，不做装备数据库，不做 3D。</li>
+</ol>
+<hr>
+<h2 id="3">3. 非目标（明确不做，防止范围膨胀）</h2>
+<ul>
+<li>❌ 真实装备参数库（既拿不到也不该有，且是最容易踩雷的部分）</li>
+<li>❌ 3D 拟真渲染、粒子特效、军事 UI 皮肤</li>
+<li>❌ 联网多人对战</li>
+<li>❌ 完整兵棋（六角格、回合制、CRT 表）</li>
+<li>❌ v1 不接 LLM</li>
+<li>❌ 不做 SDR 硬件闭环（留作 v2 插件）</li>
+</ul>
+<hr>
+<h2 id="4">4. 核心循环</h2>
+<pre><code>tick (默认 1s) →
+  1. 双方提交动作：开机/关机、改频、改功率、改波束指向、放诱饵、机动
+  2. 引擎结算物理：传播 → 接收功率 → J/S → 检测概率 → 测量值
+  3. 生成观测：频率、AOA、TOA、功率，叠加噪声 + 虚假目标 + 漏检
+  4. 融合定位：TDOA/AOA → 位置估计 + 协方差 → CEP
+  5. 写入 replay（JSONL）
+  6. 结算指标：Pd、CEP、暴露时长、识别正确率
+</code></pre>
+<p>胜负不用"血量"，用<strong>多目标评分向量</strong>：定位精度、识别正确率、自身暴露时长、链路可用率。</p>
+<hr>
+<h2 id="5">5. 目录结构</h2>
+<pre><code>spectrumfog/
+├── pyproject.toml
+├── README.md
+├── PROJECT.md
+├── docs/
+│   ├── physics.md          公式、假设、单位
+│   ├── design.md           建模取舍
+│   ├── scenario.md         YAML schema
+│   ├── metrics.md          指标定义
+│   ├── web.md              前端数据包
+│   ├── bench.md            Gym 环境与评测
+│   └── launch.md           发布文案
+├── src/spectrumfog/
+│   ├── units.py            SI 常量 + 单位换算
+│   ├── physics/
+│   │   ├── radar.py        雷达方程、J/S、烧穿距离
+│   │   ├── comms.py        链路预算、Eb/N0、抗干扰余量
+│   │   └── propagation.py  自由空间 + 可选绕射
+│   ├── model/
+│   │   ├── platform.py · emitter.py · sensor.py
+│   │   └── scenario.py     pydantic 模型 + YAML 加载
+│   ├── engine/
+│   │   ├── clock.py
+│   │   ├── detect.py       检测概率、测量生成
+│   │   ├── fusion.py       TDOA/AOA 定位、协方差、CEP
+│   │   └── sim.py          主循环
+│   ├── replay.py           JSONL 读写
+│   ├── metrics.py
+│   └── cli.py
+├── viz/
+│   ├── static/             matplotlib 出图（T0/T1）
+│   └── web/                Vite + React + deck.gl（T2）
+├── scenarios/
+│   ├── 01_duel.yaml        单雷达 vs 单干扰机（自屏蔽，静态）
+│   ├── 02_standoff.yaml    站距干扰 + 移动干扰机（T1 动画想定）
+│   ├── 03_triad.yaml       雷达 + 通信链路 + 双频段干扰机
+│   ├── 04_fog.yaml         三辐射源 + 虚假目标
+│   ├── 05_mobile.yaml       雷达 / 干扰机 / 目标三方机动
+│   └── 06_decoy.yaml        转发式诱饵（等效 RCS 6.3 m²）
+├── bench/                  T3：baseline 策略 + 评测脚本
+└── tests/
+</code></pre>
+<hr>
+<h2 id="6">6. 物理内核规格</h2>
+<h3 id="61-implement">6.1 必implement的公式</h3>
+<pre><code class="language-python"># 雷达回波功率
+Pr = Pt * G**2 * lam**2 * sigma / ((4*pi)**3 * R**4 * L)
+
+# 噪声底
+Pn = k * T0 * B * F                      # k=1.380649e-23, T0=290
+
+# 干扰进入接收机的功率（噪声压制）
+Pj_rx = Pj * Gj * Gr * lam**2 / ((4*pi)**2 * Rj**2) * (Br / Bj)
+
+# 干信比
+JS = Pj_rx / Pr
+
+# 自屏蔽干扰的烧穿距离（JS = 1 时解出；Gr 与 lam 在两条支路里相消，故只有 G¹）
+R_bt = sqrt(Pt * G * sigma * Bj / (4*pi * Pj * Gj * Br * L))
+
+# 检测概率（Swerling I 闭式，v1 用这个，够用）
+Pd = Pfa ** (1 / (1 + SNR))
+
+# 链路预算
+Prx = Ptx * Gtx * Grx * (lam / (4*pi*d))**2
+EbN0 = Prx / (N0 * Rb)
+AJ_margin_dB = Gp + Mc - required_JS_dB     # Gp=处理增益, Mc=编码增益
+</code></pre>
+<blockquote>
+<p>修正记录（2026-10-27）：<code>R_bt</code> 原写 <code>G**2</code>，与本节的 <code>Pr</code> / <code>Pj_rx</code> 推导矛盾
+（Gr 在两条支路里相消），已改为 <code>G</code>。推导与单测见 <code>docs/physics.md</code> §4.1。
+<code>Pd</code> 的 <code>SNR</code> 取 SINR 口径：<code>SNR = Pr / (Pn + Pj_rx)</code>，见同文件 §4.2。</p>
+</blockquote>
+<h3 id="62">6.2 单位约定</h3>
+<p><strong>内部一律 SI</strong>：W、m、Hz、s、rad。只在 CLI 输出和 YAML 里允许 dB / km / MHz，加载时立刻转换。</p>
+<table>
+<thead>
+<tr>
+<th>量</th>
+<th>内部单位</th>
+<th>允许的输入单位</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>功率</td>
+<td>W</td>
+<td>W / dBm / dBW</td>
+</tr>
+<tr>
+<td>长度</td>
+<td>m</td>
+<td>m / km / nmi</td>
+</tr>
+<tr>
+<td>频率</td>
+<td>Hz</td>
+<td>Hz / kHz / MHz / GHz</td>
+</tr>
+<tr>
+<td>时间</td>
+<td>s</td>
+<td>s / ms</td>
+</tr>
+</tbody>
+</table>
+<h3 id="63">6.3 精度验收</h3>
+<p><code>R_bt</code> 数值解与解析解误差 <strong>&lt; 1%</strong>；<code>R_bt</code> 处 J/S 必须落在 <code>1.00 ± 0.01</code>。这两个断言写进单测。</p>
+<hr>
+<h2 id="7">7. 数据格式</h2>
+<h3 id="71-yaml">7.1 想定 YAML</h3>
+<pre><code class="language-yaml">meta:
+  name: 01_duel
+  seed: 42
+  dt: 1.0              # s
+  duration: 600        # s
+
+environment:
+  noise_figure_db: 3.0
+  temperature_k: 290
+
+platforms:
+  - id: radar_a
+    side: blue
+    pos: [0, 0]
+    emitters:
+      - kind: radar
+        freq_hz: 3.0e9
+        bw_hz: 2.0e6
+        pt_w: 1.0e5
+        gain_db: 35
+        sigma_m2: 1.0
+        loss_db: 3
+  - id: jammer_b
+    side: red
+    pos: [30000, 0]
+    emitters:
+      - kind: noise_jammer
+        freq_hz: 3.0e9
+        bw_hz: 20.0e6
+        pj_w: 2000
+        gain_db: 20
+
+sensors: []            # v1 只有 ESM，见 scenario.md
+
+objectives:
+  - {type: localize, target: jammer_b, cep_m: 500}
+</code></pre>
+<h3 id="72-jsonl">7.2 回放 JSONL</h3>
+<p>一行一个事件，<strong>必须可独立解析</strong>，不许依赖前一行：</p>
+<pre><code class="language-json">{&quot;t&quot;:12.0,&quot;kind&quot;:&quot;detection&quot;,&quot;sensor&quot;:&quot;esm_1&quot;,&quot;emitter&quot;:&quot;radar_a&quot;,&quot;pd&quot;:0.83,&quot;measured&quot;:{&quot;freq_hz&quot;:3.0e9,&quot;aoa_rad&quot;:0.31,&quot;power_dbm&quot;:-72.1}}
+{&quot;t&quot;:12.0,&quot;kind&quot;:&quot;estimate&quot;,&quot;target&quot;:&quot;jammer_b&quot;,&quot;pos&quot;:[30120,880],&quot;cep_m&quot;:410,&quot;n_measurements&quot;:3}
+{&quot;t&quot;:12.0,&quot;kind&quot;:&quot;state&quot;,&quot;emitter&quot;:&quot;jammer_b&quot;,&quot;on&quot;:true,&quot;freq_hz&quot;:3.0e9,&quot;pj_w&quot;:2000}
+</code></pre>
+<hr>
+<h2 id="8-docsmetricsmd">8. 指标定义（写进 docs/metrics.md，全项目统一）</h2>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th>定义</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Pd</td>
+<td>单次照射检测概率</td>
+<td>物理正确性</td>
+</tr>
+<tr>
+<td>CEP50 / CEP90</td>
+<td>定位误差圆半径（50%/90% 分位）</td>
+<td>核心玩法指标</td>
+</tr>
+<tr>
+<td>T_expose</td>
+<td>己方辐射源被对方有效定位的持续时间</td>
+<td>生存性</td>
+</tr>
+<tr>
+<td>Link_avail</td>
+<td>链路可用时间占比（AJ margin &gt; 0）</td>
+<td>通信抗扰</td>
+</tr>
+<tr>
+<td>ID_acc</td>
+<td>辐射源型号识别正确率</td>
+<td>认知维度</td>
+</tr>
+<tr>
+<td>Score</td>
+<td>上述加权向量，权重写进想定</td>
+<td>排行榜</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="9">9. 里程碑与验收标准</h2>
+<p>总工期：<strong>6–7 周</strong>（T0–T3a 约 2.5 周，T3b 另加 4–5 周）。
+比最初的"四周路线"长，是因为 T3 被加厚、且补回了 AAR。<strong>这是范围决定的，不是执行变慢。</strong></p>
+<h3 id="t0">T0 — 物理闭环（半天，已完成）</h3>
+<p>产出：<code>physics/</code> + <code>model/scenario.py</code> + <code>cli.py</code> + <code>scenarios/01_duel.yaml</code> + <code>viz/static/plot.py</code> + 5 个单测。</p>
+<p><strong>验收</strong>：
+- <code>spectrumfog run scenarios/01_duel.yaml</code> 一条命令出三张图（烧穿曲线、Pd–距离、J/S–距离）
+- J/S=1 时 R 与解析解误差 &lt; 1%
+- 至少一张图可以直接当 README 头图</p>
+<h3 id="t1-2d-12">T1 — 2D 动态 + 首次发布（+1–2 天）</h3>
+<p>产出：俯视动画，干扰机移动 → 烧穿半径收缩 → 雷达失效。</p>
+<p><strong>验收</strong>：导出一段 10 秒 GIF/MP4，不需要旁白就能看懂。</p>
+<p><strong>🚩 发布闸门：T1 一结束就公开仓库、发 README、发渠道，不等 T2。</strong>
+这是"门面"真正的价值——不是多一个独立项目，是<strong>早一次发布</strong>。</p>
+<h3 id="t2-web-58">T2 — Web 交互（+5–8 天）</h3>
+<p>产出：Vite + React + deck.gl，GitHub Pages 静态部署。</p>
+<p><strong>验收</strong>：打开网页可拖动干扰机，热力图与曲线 &lt; 100ms 更新；无后端。</p>
+<h3 id="t3a-aar-34">T3a — AAR 复盘分析（+3–4 天）</h3>
+<p>产出：<code>replay.jsonl</code> → 关键事件时间线、暴露时刻、定位误差归因、单页 HTML 报告。</p>
+<p><strong>验收</strong>：对 <code>01_duel</code> 自动生成"你的辐射源在第 12 秒被定位，原因是 X"。</p>
+<p><strong>为什么排在 T3b 前面</strong>：没有归因的排行榜只是一个分数列表；有了 AAR，它才是训练工具。顺序不能反。</p>
+<h3 id="t3b-45">T3b — 平台化（+4–5 周，<strong>可选分支</strong>）</h3>
+<p>产出：Gymnasium 接口、3 个 baseline 策略、评测脚本、排行榜、5 个想定、文档站。</p>
+<p><strong>验收</strong>：<code>pip install -e . &amp;&amp; spectrumfog bench --all</code> 三条命令跑完，产出可比表格。</p>
+<p><strong>分支决策点</strong>：若不打算写论文 / 进实验室，<strong>停在这里即可</strong>——T0–T3a 完成时项目已经完整。</p>
+<hr>
+<h2 id="10">10. 技术栈</h2>
+<pre><code>语言     Python 3.11+
+依赖     pydantic · pyyaml · numpy · matplotlib · pytest
+可选     gymnasium · networkx · pint
+前端     Vite + React + TypeScript + canvas 自绘（deck.gl 留到 T3b 的大规模轨迹）
+部署     GitHub Pages（纯静态）/ PyPI（库）
+协议     Apache-2.0（代码）+ CC-BY-4.0（文档与想定）
+</code></pre>
+<p><strong>性能目标</strong>：10³ 平台 × 10⁴ tick 在单机 60 秒内跑完（numpy 向量化，别写 Python 循环）。</p>
+<hr>
+<h2 id="11">11. 发布计划</h2>
+<p>star 主要来自发布，不是来自代码量。</p>
+<p><strong>发布闸门：T1 结束就发。</strong> 有 GIF、有仓库就发，不等 T2 做完。这是"门面"真正的价值——不是多一个独立项目，是<strong>早一次发布</strong>，心理上和风险上都比憋到最后健康。</p>
+<ol>
+<li><strong>README 三段式</strong>：一句话 + GIF + 一条命令跑起来。第一屏必须有一张会动的图。</li>
+<li><strong>渠道</strong>：r/computerwargames、r/RadioFrequency、Hacker News（"Show HN"）、B站/知乎（中文长文，讲"看不见的战争怎么建模"）。</li>
+<li><strong>可信度</strong>：一篇 <code>docs/design.md</code> 讲建模取舍，比十篇 README 有用。</li>
+<li><strong>进课堂</strong>：找一门课用它做实验，比追 star 有效。</li>
+</ol>
+<hr>
+<h2 id="12-readme">12. 合规红线（写进 README 顶部）</h2>
+<ul>
+<li>仅使用公开教科书物理公式与<strong>虚构参数</strong>，不包含任何真实装备性能数据、番号或部署信息。</li>
+<li>定位为 educational / research simulation，非作战软件，不提供战术建议。</li>
+<li>命名与文案避免"作战/打击/杀伤"等表述，统一用 simulation / analysis / wargame（学术义）。</li>
+</ul>
+<hr>
+<h2 id="13">13. 下一个对话的开场指令（直接复制粘贴）</h2>
+<pre><code>读 PROJECT.md，T0 已完成，我们从 T1 开始。
+先只做三件事：
+1. engine/clock.py（固定步长）+ engine/sim.py（主循环）+ replay.py（JSONL，一行一事件、可独立解析）
+2. 让干扰机动起来（移动字段随 T1 加进 schema），引擎逐 tick 结算 J/S 与 Pd
+3. viz/static/animate.py：俯视动画 —— 干扰机移动 → 烧穿半径收缩 → 雷达失效，导出 GIF/MP4
+验收：10 秒片段不需要旁白就能看懂；同一 seed 的 replay 逐帧复现。
+T1 一结束就发布（README 换头图 + GIF、仓库公开），不等 T2。
+</code></pre>
+<hr>
+<h2 id="14">14. 当前状态</h2>
+<ul>
+<li>[x] 选题与规格确定</li>
+<li>[x] 路线对齐（四角色 × T0–T3b）</li>
+<li>[x] T0 物理闭环（2026-10-27：<code>spectrumfog run scenarios/01_duel.yaml</code> 出三图，56 项单测）</li>
+<li>[x] T1 2D 动态 + <strong>首次发布</strong>（2026-10-27：<code>sim --gif</code> 出 10 s 动画 + 确定性 replay；仓库已公开）</li>
+<li>[x] T2 Web 交互（2026-10-27：<code>export-web</code> 数据包 + Vite/React 交互页 + Pages 上线）</li>
+<li>[x] T3a AAR 复盘分析（2026-10-27：<code>spectrumfog aar</code> 出时间线 + 暴露时长 + 留一法归因 + 单页 HTML）</li>
+<li>[ ] T3b 平台化（进行中：Gymnasium 环境 + 3 个 baseline + 5 个想定 + <code>bench --all</code> 已通；
+      还差文档站与公开排行榜）</li>
+</ul>
+  </main>
+</div>
+<footer>参数全部虚构 · 仅用于教学 / 研究仿真 · Apache-2.0 + CC BY 4.0</footer>
+</body>
+</html>

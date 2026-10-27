@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>物理内核：公式、假设、单位与已知缺口 · SpectrumFog</title>
+<style>
+:root {
+  --ink: #2b2f36; --muted: #6b7178; --line: #e3e6ea; --bg: #f7f8fa;
+  --accent: #2f6fbf; --code-bg: #f2f4f7;
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); line-height: 1.7; }
+.layout { display: grid; grid-template-columns: 230px minmax(0, 880px); gap: 36px;
+          max-width: 1200px; margin: 0 auto; padding: 28px 24px 64px; }
+.side { position: sticky; top: 24px; align-self: start; font-size: 13.5px; }
+.side .brand { font-weight: 700; font-size: 15px; margin-bottom: 2px; }
+.side .sub { color: var(--muted); font-size: 12px; margin-bottom: 18px; }
+.side a { display: block; color: var(--ink); text-decoration: none; padding: 3px 0; }
+.side a:hover { color: var(--accent); }
+.side a.active { color: var(--accent); font-weight: 600; }
+.side .tag { color: var(--muted); font-size: 11.5px; padding-left: 0; }
+.side hr { border: 0; border-top: 1px solid var(--line); margin: 14px 0; }
+.side .back { color: var(--muted); font-size: 12.5px; }
+main { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 28px 34px 40px; }
+main > h1:first-child { margin-top: 0; }
+h1 { font-size: 26px; } h2 { font-size: 20px; margin-top: 34px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+h3 { font-size: 16.5px; margin-top: 26px; }
+a { color: var(--accent); }
+code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; font-size: 0.92em;
+       font-family: "Cascadia Mono", "Consolas", monospace; }
+pre { background: #f6f8fa; border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px;
+      overflow-x: auto; }
+pre code { background: none; padding: 0; font-size: 12.5px; line-height: 1.55; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; margin: 14px 0; }
+th, td { border: 1px solid var(--line); padding: 6px 9px; text-align: left; vertical-align: top; }
+th { background: #f6f8fa; }
+blockquote { margin: 14px 0; padding: 6px 16px; border-left: 3px solid var(--accent);
+             color: var(--muted); background: #f8fafc; }
+img { max-width: 100%; border-radius: 8px; border: 1px solid var(--line); }
+hr { border: 0; border-top: 1px solid var(--line); margin: 26px 0; }
+footer { max-width: 1200px; margin: 0 auto; padding: 0 24px 40px; color: var(--muted); font-size: 12px; }
+@media (max-width: 820px) {
+  .layout { grid-template-columns: 1fr; }
+  .side { position: static; }
+  main { padding: 20px; }
+}
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="side">
+    <div class="brand">SpectrumFog</div>
+    <div class="sub">频谱迷雾 · 文档</div>
+    <a class="nav" href="index.html">概览</a><span class="tag">从零到跑起来</span>
+    <a class="nav active" href="physics.html">物理</a><span class="tag">公式、假设、缺口</span>
+    <a class="nav" href="design.html">设计取舍</a><span class="tag">为什么这么做</span>
+    <a class="nav" href="scenario.html">想定格式</a><span class="tag">YAML schema</span>
+    <a class="nav" href="metrics.html">指标</a><span class="tag">Pd / CEP / 暴露</span>
+    <a class="nav" href="bench.html">评测</a><span class="tag">Gym 环境与 baseline</span>
+    <a class="nav" href="web.html">网页数据包</a><span class="tag">前端不算物理</span>
+    <a class="nav" href="roadmap.html">路线图</a><span class="tag">里程碑与验收</span>
+    <hr>
+    <a class="back" href="../index.html">← 打开交互演示</a>
+    <a class="back" href="https://github.com/haohaohao-cell/spectrumfog">GitHub 仓库</a>
+  </aside>
+  <main>
+<h1 id="_1">物理内核：公式、假设、单位与已知缺口</h1>
+<blockquote>
+<p>本文件记录 <code>spectrumfog.physics</code> <strong>实际实现</strong>了什么、为什么这么实现。
+规格源头是 <a href="roadmap.html">PROJECT.md</a> §6；两边不一致时以本文件的"裁决记录"为准，
+并且必须回来改 PROJECT.md。</p>
+</blockquote>
+<h2 id="1">1. 单位约定</h2>
+<p>内部一律 SI，且<strong>增益/损耗一律线性</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>量</th>
+<th>内部单位</th>
+<th>允许的输入写法（YAML / CLI）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>功率</td>
+<td>W</td>
+<td><code>pt_w</code> / <code>pt_kw</code> / <code>pt_dbm</code> / <code>pt_dbw</code>（同 <code>pj_*</code>）</td>
+</tr>
+<tr>
+<td>长度</td>
+<td>m</td>
+<td><code>pos</code>（米）/ <code>pos_km</code> / <code>pos_nmi</code></td>
+</tr>
+<tr>
+<td>频率</td>
+<td>Hz</td>
+<td><code>freq_hz</code> / <code>freq_khz</code> / <code>freq_mhz</code> / <code>freq_ghz</code>（同 <code>bw_*</code>）</td>
+</tr>
+<tr>
+<td>时间</td>
+<td>s</td>
+<td><code>dt</code> / <code>dt_ms</code>，<code>duration</code> / <code>duration_ms</code></td>
+</tr>
+<tr>
+<td>增益、损耗、噪声系数</td>
+<td>线性</td>
+<td>YAML 写 <code>gain_db</code> / <code>loss_db</code> / <code>noise_figure_db</code>，<strong>加载时</strong>换成线性</td>
+</tr>
+<tr>
+<td>角度</td>
+<td>rad</td>
+<td>尚未使用（T1 的 AOA 会用到）</td>
+</tr>
+</tbody>
+</table>
+<p>换算只发生在 <code>model.scenario.normalize_units</code>（单位后缀）与 pydantic 的 before-validator（dB→线性）。
+<code>physics</code> 层的函数<strong>不接受 dB</strong>：传 dB 进去会得到静默错误的数，所以接口层就用线性值。</p>
+<h2 id="2">2. 符号</h2>
+<table>
+<thead>
+<tr>
+<th>符号</th>
+<th>含义</th>
+<th>单位</th>
+<th>代码里的名字</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Pt</td>
+<td>雷达发射功率</td>
+<td>W</td>
+<td><code>pt_w</code></td>
+</tr>
+<tr>
+<td>Gt / Gr</td>
+<td>雷达发射 / 接收增益</td>
+<td>—</td>
+<td><code>gt</code> / <code>gr</code>（单站用同一个 <code>gain</code>）</td>
+</tr>
+<tr>
+<td>Pj</td>
+<td>干扰机发射功率</td>
+<td>W</td>
+<td><code>pj_w</code></td>
+</tr>
+<tr>
+<td>Gj</td>
+<td>干扰机在雷达方向上的增益</td>
+<td>—</td>
+<td><code>gj</code></td>
+</tr>
+<tr>
+<td>λ</td>
+<td>波长 = c/f</td>
+<td>m</td>
+<td><code>lam</code>（<code>wavelength()</code>）</td>
+</tr>
+<tr>
+<td>σ</td>
+<td>目标 RCS</td>
+<td>m²</td>
+<td><code>sigma_m2</code></td>
+</tr>
+<tr>
+<td>R</td>
+<td>雷达到目标距离</td>
+<td>m</td>
+<td><code>range_m</code></td>
+</tr>
+<tr>
+<td>Rj</td>
+<td>雷达到干扰机距离</td>
+<td>m</td>
+<td><code>range_j_m</code></td>
+</tr>
+<tr>
+<td>Br</td>
+<td>雷达接收带宽</td>
+<td>Hz</td>
+<td><code>bw_r_hz</code></td>
+</tr>
+<tr>
+<td>Bj</td>
+<td>干扰机噪声带宽</td>
+<td>Hz</td>
+<td><code>bw_j_hz</code></td>
+</tr>
+<tr>
+<td>L</td>
+<td>系统损耗（≥ 1）</td>
+<td>—</td>
+<td><code>loss</code></td>
+</tr>
+<tr>
+<td>F</td>
+<td>噪声系数（线性）</td>
+<td>—</td>
+<td><code>noise_figure</code></td>
+</tr>
+<tr>
+<td>T0</td>
+<td>标准噪声温度 = 290 K</td>
+<td>K</td>
+<td><code>temperature_k</code>（默认 <code>units.T0_K</code>）</td>
+</tr>
+<tr>
+<td>k</td>
+<td>玻尔兹曼常数 = 1.380649e-23</td>
+<td>J/K</td>
+<td><code>units.K_BOLTZMANN</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="3">3. 公式</h2>
+<h3 id="31">3.1 雷达方程与噪声</h3>
+<pre><code>Pr    = Pt · Gt · Gr · λ² · σ / ((4π)³ · R⁴ · L)          # radar.received_power
+Pn    = k · T0 · B · F                                     # radar.noise_power
+</code></pre>
+<h3 id="32">3.2 噪声压制干扰</h3>
+<pre><code>Pj_rx = Pj · Gj · Gr · λ² / ((4π)² · Rj²) · (Br / Bj)      # radar.jammer_received_power
+JS    = Pj_rx / Pr                                         # radar.js_ratio
+</code></pre>
+<p><code>Br/Bj</code> 是"只有落进接收带宽的那部分干扰功率算数"。自屏蔽干扰（干扰机与目标同处，Rj = R）时：</p>
+<pre><code>JS(R) = 4π · Pj · Gj · R² · L · Br / (Pt · Gt · σ · Bj)    # radar.js_ratio_self_screen
+</code></pre>
+<h3 id="33">3.3 烧穿距离</h3>
+<p>令 JS = 1 解出（自屏蔽，Rj = R）：</p>
+<pre><code>R_bt = sqrt( Pt · Gt · σ · Bj / (4π · Pj · Gj · Br · L) )    # radar.burn_through_range
+</code></pre>
+<p><strong>站距干扰</strong>（干扰机在 Rj、目标在 R ≠ Rj）时，JS ∝ R⁴/Rj²，令 JS = 1：</p>
+<pre><code>R_bt(Rj) = sqrt( R_bt · Rj )        # radar.burn_through_range_standoff
+</code></pre>
+<p>即"围绕雷达的烧穿半径随干扰机距离开平方根收缩"：干扰机从 200 km 压到 50 km，
+半径缩一半；Rj = R_bt 时退回自屏蔽。这是 T1 动画的主线（<code>02_standoff</code>）。</p>
+<h3 id="34-swerling-i">3.4 检测概率（Swerling I 单脉冲闭式）</h3>
+<pre><code>SNR = Pr / (Pn + Pj_rx)          # radar.sinr，含干扰；无干扰时退化为 Pr/Pn
+Pd  = Pfa ^ (1 / (1 + SNR))      # radar.pd_swerling1
+</code></pre>
+<p><code>SNR</code> 是<strong>线性</strong>值。边界行为：SNR = 0 → Pd = Pfa；SNR → ∞ → Pd → 1。</p>
+<h3 id="35">3.5 检测距离（闭式解，不是迭代）</h3>
+<p><code>radar.detection_range(target_pd, pfa, ...)</code> 解 <code>Pd(R) = target_pd</code>。记 A = Pr(1 m)、
+B = Pj_rx(1 m)，则 Pr(R) = A/R⁴、Pj_rx(R) = B/R²（自屏蔽）或 B/Rj²（站距）。</p>
+<pre><code>Pd = Pfa ** (1/(1+SINR)) = target_pd
+⇒ k = ln(target_pd)/ln(Pfa) = 1/(1+SINR)  ⇒  S0 = 1/k - 1
+
+站距：  A/R⁴ = S0·(Pn + B/Rj²)         ⇒ R = [A / (S0·(Pn + B/Rj²))]^(1/4)
+自屏蔽：A/R⁴ = S0·(Pn + B/R²)           ⇒ 令 u=R²: S0·Pn·u² + S0·B·u - A = 0
+                                        u = 2A / (sqrt((S0·B)² + 4·S0·Pn·A) + S0·B)
+</code></pre>
+<p>注意自屏蔽那一行用的是<strong>共轭形式</strong>：直接写 <code>(-b + sqrt(b²+4ac))/(2a)</code> 在
+<code>Pn ≪ B</code> 的常见参数下会发生灾难性抵消（实测跑出负数根），所以必须改写。</p>
+<p>A、B 由 <code>received_power</code> / <code>jammer_received_power</code> 在 1 m 处取值得到，
+所以这里没有第二套物理公式；O(1) 也避免了引擎每个 tick 跑二分
+（T1 实测：600 tick 的想定从 14 s 降到 1.3 s）。</p>
+<h3 id="36">3.6 传播与链路预算</h3>
+<pre><code>Prx      = Ptx · Gtx · Grx · (λ / (4πd))²                   # propagation.received_power
+FSPL     = (4πd / λ)²                                       # propagation.free_space_path_loss
+Eb/N0    = Prx / (N0 · Rb),  N0 = k · T · F                 # comms.ebn0 / comms.noise_psd
+AJ_margin_dB = Gp + Mc - required_JS_dB                     # comms.aj_margin_db
+</code></pre>
+<h3 id="37-esm-t3a">3.7 ESM 观测与定位（T3a）</h3>
+<p>传感器只看<strong>对方阵营</strong>的辐射源。单程 Friis 得到到达功率，噪声底用传感器自己的
+带宽与噪声系数，再用同一个 Swerling I 闭式给单次扫描的检出概率：</p>
+<pre><code>Prx   = Ptx · Gtx · Grx · (λ / 4πR)²            # 单程，engine/detect.py
+Pn    = k · T0 · Bs · Fs                        # 传感器带宽 / 噪声系数
+Pd    = Pfa ^ (1/(1 + SNR))                     # 与雷达同一个函数
+σ_aoa = 2° · sqrt(100 / SNR)                    # 夹在 [0.2°, 20°]
+</code></pre>
+<p>检出后生成带噪声的 AOA、TOA（σ = 100 ns ≈ 30 m）、频率、功率；按 <code>pfa_scan</code>
+生成无源量测（虚假目标，<code>emitter = null</code>）。</p>
+<p>定位用加权最小二乘（<code>engine/fusion.py</code>），未知量只有 (x, y)，残差两类：</p>
+<pre><code>测向：  wrap(aoa_i − atan2(p − s_i)) / σ_aoa
+TDOA：  [ (|p − s_i| − |p − s_ref|)/c − (toa_i − toa_ref) ] / √(σ_toa,i² + σ_toa,ref²)
+</code></pre>
+<p>协方差 = (JᵀWJ)⁻¹，有冗余时用残差估方差因子（chi²/dof）。少于两条测向、
+又不足三个 TOA 时几何上定不了位，直接返回 None——不猜。</p>
+<p>AAR 的归因用的就是这套残差函数：留一法重解、单独喂测向 / TDOA，
+所以"原因是 X"这句话是可以被复算的，不是写出来的。</p>
+<h3 id="38-t3b">3.8 诱饵（转发式假目标，T3b）</h3>
+<p>诱饵被雷达照到后放大转发，雷达收到的是两段单程：</p>
+<pre><code>P_r  = [Pt·Gt·G_d·λ²/((4π)²R²)] · A · [G_d·Gr·λ²/((4π)²R²)]
+     = Pt·Gt·Gr·λ⁴·G_d²·A / ((4π)⁴·R⁴)          # radar.decoy_echo_power
+σ_eq = λ²·G_d²·A·L / (4π)                        # radar.decoy_equivalent_rcs
+</code></pre>
+<p><code>σ_eq</code> 的定义就是"同距离上给出同样回波功率的目标 RCS"，所以诱饵可以直接和真实目标
+放在一张表里比较（06_decoy 里诱饵 σ_eq 6.3 m²，回波是 70 km 外真目标的 325 倍）。</p>
+<p>诱饵对 ESM 的可见性由<strong>转发功率</strong>决定：<code>P_tx = 照射功率 × A</code>。
+所以它只在该帧辐射、功率随距离变化——这条写进了 <code>radar.decoy_transmit_power</code>。</p>
+<p>注意：诱饵不能对抗噪声压制。03_triad 里 90 W 的同频干扰机把雷达整个压住时，
+诱饵（等效 6 m²）和真目标一起消失，<code>decoy_detected_fraction</code> 为 0——
+诱饵骗的是"看得见的雷达"，不是"被致盲的雷达"。</p>
+<h2 id="4">4. 裁决记录</h2>
+<h3 id="41-g1-g2">4.1 烧穿距离里的增益指数：G¹，不是 G²</h3>
+<p>PROJECT.md §6.1 写的是</p>
+<pre><code>R_bt = sqrt(Pt * G**2 * sigma * Bj / (4*pi * Pj * Gj * Br * L))
+</code></pre>
+<p>但与同一节的 Pr 与 Pj_rx 定义联立，Gr 会被约掉：</p>
+<pre><code>JS = [Pj·Gj·Gr·λ²/((4π)²R²) · (Br/Bj)] / [Pt·Gt·Gr·λ²σ/((4π)³R⁴L)]
+   = 4π·Pj·Gj·R²·L·Br / (Pt·Gt·σ·Bj)        # Gr 相消
+</code></pre>
+<p>令 JS = 1：</p>
+<pre><code>R_bt = sqrt( Pt·Gt·σ·Bj / (4π·Pj·Gj·Br·L) )   # 只有一个 G
+</code></pre>
+<p><strong>结论：§6.1 的 <code>G**2</code> 是笔误，实现以 G¹ 为准</strong>（2026-10-27 与需求方确认）。
+物理上：自屏蔽干扰的接收增益同时出现在回波支路与干扰支路，互相抵消；
+烧穿距离只由<strong>发射</strong>增益决定。</p>
+<p>同理，λ² 在两条支路里也相消，所以 <code>burn_through_range</code> <strong>签名里没有 <code>lam</code></strong> ——
+传进去是 <code>TypeError</code>，不是静默忽略。</p>
+<p><code>tests/test_radar.py</code> 里两条测试直接钉住这两件事：
+<code>test_self_screening_js_is_independent_of_receive_gain</code> 与
+<code>test_self_screening_js_is_wavelength_agnostic</code>。</p>
+<h3 id="42-pd-sinr">4.2 Pd 用 SINR 口径</h3>
+<p>PROJECT.md §6.1 只给了 <code>Pd = Pfa**(1/(1+SNR))</code>，没定义 SNR 是否含干扰。
+实现取 <code>SNR = Pr/(Pn + Pj_rx)</code>：干扰压制 = 分母变大 = 检测概率下降，
+这才是"干扰真的降低检测能力"的物理。纯热噪声 SNR 仍可单独取用（<code>snr_thermal</code>）。</p>
+<h2 id="5">5. 数值方法</h2>
+<table>
+<thead>
+<tr>
+<th>问题</th>
+<th>方法</th>
+<th>参数</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>JS(R) = 目标值 → R</td>
+<td>对数空间二分，只用 <code>js_ratio_self_screen</code> / <code>js_ratio_standoff</code> 的取值</td>
+<td><code>rtol=1e-10</code>（对数区间宽度），区间 <code>[1 m, 1e9 m]</code>，未跨过解则抛 ValueError</td>
+</tr>
+<tr>
+<td>Pd(R) = 门槛 → R</td>
+<td><strong>闭式解</strong>（§3.5），不迭代</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><code>range_at_js</code> 保留二分是故意的：它是唯一"不信任解析式"的路径，
+所以能对 <code>burn_through_range</code> 做独立交叉验证（见 §6 的实测误差）。
+检测距离则不需要二分 —— 它的验收标准是"代回去 Pd = 门槛"，测试直接查这个。</p>
+<h2 id="6-projectmd-63">6. 精度验收（PROJECT.md §6.3）</h2>
+<p>要求：<code>R_bt</code> 数值解与解析解误差 &lt; 1%；<code>R_bt</code> 处 J/S 落在 1.00 ± 0.01。</p>
+<p>实测（三组量级不同的参数，见 <code>tests/test_radar.py</code>）：</p>
+<table>
+<thead>
+<tr>
+<th>场景</th>
+<th>R_bt 解析</th>
+<th>相对误差</th>
+<th>JS(R_bt)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>01_duel 原参数（强干扰）</td>
+<td>25.112 m</td>
+<td>7.3e-12</td>
+<td>1.000000000000</td>
+</tr>
+<tr>
+<td>弱干扰 + 强雷达</td>
+<td>224.08 km</td>
+<td>2.4e-11</td>
+<td>1.000000000000</td>
+</tr>
+<tr>
+<td>X 波段大孔径</td>
+<td>7.96 km</td>
+<td>9.6e-12</td>
+<td>1.000000000000</td>
+</tr>
+</tbody>
+</table>
+<p>误差比验收线小 9 个数量级；单测里除了 1% 的宽松线，还钉了 <code>rel &lt; 1e-6</code> 的紧线，
+防止实现被改松后仍然"刚好通过"。</p>
+<h2 id="7">7. 假设与已知缺口</h2>
+<p>建模时明确接受的简化，改动前请先读这一节：</p>
+<ol>
+<li><strong>单站、无处理增益</strong>。没有脉压、相干积累、MTI/PD 滤波。
+   后果：干扰效能被高估——等效"够用的干扰功率"偏小。
+   若加 20 dB 处理增益，J/S 降 100 倍，R_bt 涨约 10 倍。</li>
+<li><strong>Swerling I 单脉冲闭式对 SNR 很钝</strong>：Pfa = 1e-6 时 Pd = 0.9 需要约 21 dB SNR，
+   而不是经验直觉的 13 dB。这不是 bug，是闭式的形状；做检测距离估算时别按 13 dB 拍。
+   推论：<strong>"烧穿"不等于"能检测"</strong>。01_duel 里 R_bt = 3.24 km，但干扰下 Pd = 0.5 的距离只有 0.75 km
+   ——因为 J/S = 1 只是把信噪比砍一半（3 dB），而检测要的是绝对 SNR。</li>
+<li><strong>只有噪声压制干扰</strong>。欺骗、脉冲、扫频干扰未建模。</li>
+<li><strong>自由空间传播</strong>。无多径、无地形遮蔽、无大气吸收；B 只按带宽比例 <code>Br/Bj</code> 计，无频率选择性。</li>
+<li><strong>无极化、无旁瓣</strong>：Gj 是"朝雷达方向"的单一增益，天线方向图在 T1 才进来。</li>
+<li><strong>单站假设</strong>：<code>received_power</code> 接口支持 Gt ≠ Gr（为将来双站留的），
+   但 <code>js_ratio_self_screen</code> / <code>burn_through_range</code> 只按单站用。</li>
+<li><strong>参数全虚构</strong>：所有数值都是为了让曲线可读而选的，不代表任何真实装备。</li>
+<li><strong>检测是单次照射的抽样</strong>：<code>detected</code> 事件只是"这一帧掷点是否 &lt; Pd"，
+   没有航迹维持、没有 M-of-N 确认。Pd = 0.9 时连续两次漏检是正常现象，
+   <strong>不能</strong>把单次漏检当成"目标丢失"——动画里的 TRACKING/JAMMED 用的是 Pd 门槛，
+   掷点只作为灰色阶梯线展示（见 docs/metrics.md §1）。</li>
+<li><strong>运动是分段线性的航路点</strong>：无加速度、无机动的物理约束；超出航路点范围时
+   停在端点（不外推，否则 replay 里的位置会依赖仿真时长）。</li>
+<li><strong>动态几何只支持"一台雷达 + 一台干扰机 + 一个目标"</strong>：多目标、
+    多干扰机的合成干扰（功率叠加）要等 T2/T3 的引擎扩展。</li>
+</ol>
+<h2 id="8-t1">8. 动态与回放（T1）</h2>
+<p>时间、随机、日志三件事的契约：</p>
+<table>
+<thead>
+<tr>
+<th>环节</th>
+<th>实现</th>
+<th>保证</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>时间</td>
+<td><code>engine.clock.Clock</code>：<code>t = index · dt</code></td>
+<td>不累加浮点，任意机器上时间戳一致</td>
+</tr>
+<tr>
+<td>随机</td>
+<td><code>np.random.default_rng(scenario.meta.seed)</code></td>
+<td>同一 seed ⇒ 逐字节相同的 replay</td>
+</tr>
+<tr>
+<td>日志</td>
+<td><code>replay.write_replay</code>：一行一事件、<code>sort_keys=True</code></td>
+<td>可 diff / 可哈希 / 每行独立可解析</td>
+</tr>
+<tr>
+<td>出图</td>
+<td><code>viz/static/animate.py</code>：只读 replay</td>
+<td>画面数字全部来自日志，不重算物理</td>
+</tr>
+</tbody>
+</table>
+<p>两条命令把这条链串起来：</p>
+<pre><code class="language-bash">spectrumfog sim scenarios/02_standoff.yaml --gif   # 跑仿真 + 写 replay + 出 GIF
+spectrumfog animate out/02_standoff.jsonl -o x.gif # 只读 replay，重出动画
+</code></pre>
+<p><code>02_standoff</code> 的实测：121 帧（dt=2 s，240 s），12 fps ⇒ 10.08 s GIF；
+干扰机 60 → 4 km，检测边界 20.5 → 5.3 km，Pd 在 t = 170 s 跌破 0.5。</p>
+  </main>
+</div>
+<footer>参数全部虚构 · 仅用于教学 / 研究仿真 · Apache-2.0 + CC BY 4.0</footer>
+</body>
+</html>

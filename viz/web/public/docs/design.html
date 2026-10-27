@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>建模取舍（design notes） · SpectrumFog</title>
+<style>
+:root {
+  --ink: #2b2f36; --muted: #6b7178; --line: #e3e6ea; --bg: #f7f8fa;
+  --accent: #2f6fbf; --code-bg: #f2f4f7;
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); line-height: 1.7; }
+.layout { display: grid; grid-template-columns: 230px minmax(0, 880px); gap: 36px;
+          max-width: 1200px; margin: 0 auto; padding: 28px 24px 64px; }
+.side { position: sticky; top: 24px; align-self: start; font-size: 13.5px; }
+.side .brand { font-weight: 700; font-size: 15px; margin-bottom: 2px; }
+.side .sub { color: var(--muted); font-size: 12px; margin-bottom: 18px; }
+.side a { display: block; color: var(--ink); text-decoration: none; padding: 3px 0; }
+.side a:hover { color: var(--accent); }
+.side a.active { color: var(--accent); font-weight: 600; }
+.side .tag { color: var(--muted); font-size: 11.5px; padding-left: 0; }
+.side hr { border: 0; border-top: 1px solid var(--line); margin: 14px 0; }
+.side .back { color: var(--muted); font-size: 12.5px; }
+main { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 28px 34px 40px; }
+main > h1:first-child { margin-top: 0; }
+h1 { font-size: 26px; } h2 { font-size: 20px; margin-top: 34px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+h3 { font-size: 16.5px; margin-top: 26px; }
+a { color: var(--accent); }
+code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; font-size: 0.92em;
+       font-family: "Cascadia Mono", "Consolas", monospace; }
+pre { background: #f6f8fa; border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px;
+      overflow-x: auto; }
+pre code { background: none; padding: 0; font-size: 12.5px; line-height: 1.55; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; margin: 14px 0; }
+th, td { border: 1px solid var(--line); padding: 6px 9px; text-align: left; vertical-align: top; }
+th { background: #f6f8fa; }
+blockquote { margin: 14px 0; padding: 6px 16px; border-left: 3px solid var(--accent);
+             color: var(--muted); background: #f8fafc; }
+img { max-width: 100%; border-radius: 8px; border: 1px solid var(--line); }
+hr { border: 0; border-top: 1px solid var(--line); margin: 26px 0; }
+footer { max-width: 1200px; margin: 0 auto; padding: 0 24px 40px; color: var(--muted); font-size: 12px; }
+@media (max-width: 820px) {
+  .layout { grid-template-columns: 1fr; }
+  .side { position: static; }
+  main { padding: 20px; }
+}
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="side">
+    <div class="brand">SpectrumFog</div>
+    <div class="sub">频谱迷雾 · 文档</div>
+    <a class="nav" href="index.html">概览</a><span class="tag">从零到跑起来</span>
+    <a class="nav" href="physics.html">物理</a><span class="tag">公式、假设、缺口</span>
+    <a class="nav active" href="design.html">设计取舍</a><span class="tag">为什么这么做</span>
+    <a class="nav" href="scenario.html">想定格式</a><span class="tag">YAML schema</span>
+    <a class="nav" href="metrics.html">指标</a><span class="tag">Pd / CEP / 暴露</span>
+    <a class="nav" href="bench.html">评测</a><span class="tag">Gym 环境与 baseline</span>
+    <a class="nav" href="web.html">网页数据包</a><span class="tag">前端不算物理</span>
+    <a class="nav" href="roadmap.html">路线图</a><span class="tag">里程碑与验收</span>
+    <hr>
+    <a class="back" href="../index.html">← 打开交互演示</a>
+    <a class="back" href="https://github.com/haohaohao-cell/spectrumfog">GitHub 仓库</a>
+  </aside>
+  <main>
+<h1 id="design-notes">建模取舍（design notes）</h1>
+<blockquote>
+<p>这篇回答"为什么这么做"，而不是"做了什么"。做了什么看 <a href="index.html">README</a>，
+公式与缺口看 <a href="physics.html">physics.md</a>。
+发布时这是给 HN / r/RadioFrequency 那类读者看的：他们信的是取舍，不是功能列表。</p>
+</blockquote>
+<h2 id="1">1. 为什么把"观测"当核心，而不是把"杀伤"当核心</h2>
+<p>大多数兵棋的结算终点是"命中/未命中"。这里的终点是<strong>对方能拼出多准的一张图</strong>：
+频率、到达角、到达时间、功率，各自带噪声、带漏检、带虚假目标，再融合成位置估计与协方差。</p>
+<p>这个选择决定了后面所有技术路线：必须有概率化测量（不是布尔可见性），
+必须有事件日志（不然没法复盘"你是从哪一刻开始暴露的"），
+必须有确定性重放（不然"这次为什么输"永远说不清）。</p>
+<h2 id="2">2. 为什么确定性是地基，而不是优化项</h2>
+<p>规格里写的是"固定步长 + seeded RNG + 事件日志"，落地时拆成三条硬约束：</p>
+<table>
+<thead>
+<tr>
+<th>约束</th>
+<th>实现</th>
+<th>为什么不能妥协</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>时间</td>
+<td><code>t = index · dt</code>，不累加</td>
+<td>浮点累加会漂，漂了就没法逐帧对齐</td>
+</tr>
+<tr>
+<td>随机</td>
+<td>单一 <code>default_rng(seed)</code>，只用于检测掷点</td>
+<td>任何一处隐式随机都会让 replay 失效</td>
+</tr>
+<tr>
+<td>日志</td>
+<td>一行一事件、<code>sort_keys</code>、每行自包含</td>
+<td>可比对、可哈希、可单独解析</td>
+</tr>
+</tbody>
+</table>
+<p>代价是：每次跑都要把状态序列化一遍（replay 比快照大），且不能随手用
+<code>random.random()</code>。收益是：同一想定 + 同一 seed，<code>sha256</code> 完全一致——
+这条有单测直接守着（<code>test_standoff_run_is_deterministic</code>）。</p>
+<h2 id="3">3. 为什么物理只有一份，前端只做插值</h2>
+<p>规格说"一个内核三个面，不许前后端各写一套"。T2 又要求无后端。
+两条同时成立的唯一做法：</p>
+<pre><code>Python（唯一物理实现） --export-web--&gt; (Rt, Rj) 查表 --插值--&gt; 浏览器
+</code></pre>
+<p>代价：页面的数值是插值出来的，边界处有几 % 的误差；
+代价：想改物理必须重新导出数据包。
+收益：网页上的数和 CLI 上的数<strong>不可能</strong>对不上——这类不一致最伤可信度。</p>
+<p>表用 base64 float32（126 KB），而不是 JSON 浮点数组（体积 ×4）；
+两个轴都是 <code>geomspace</code>，所以插值必须在 log 空间做，否则近距段会明显失真。</p>
+<h2 id="4-swerling-i">4. 为什么是 Swerling I 闭式，不是更精确的模型</h2>
+<p><code>Pd = Pfa^(1/(1+SNR))</code> 是闭式、可反解、在 <code>Pfa</code> 和 <code>SNR</code> 上单调的近似。
+它的形状对 SNR 很钝：<code>Pfa = 1e-6</code> 时要约 21 dB 才到 <code>Pd = 0.9</code>，而不是经验直觉的 13 dB。</p>
+<p>这不是 bug，是选择的代价。选它是因为：</p>
+<ul>
+<li>能反解出"检测距离"的闭式（见 physics.md §3.5），引擎每个 tick 不用迭代；</li>
+<li>v1 要的是"能讲清楚的一条曲线"，不是"能对表的一条曲线"。</li>
+</ul>
+<p>如果哪天要做检测概率对 <code>Pfa</code> 的精细权衡，应该换 Marcum Q / Swerling 精确式，
+并同时把反解改回数值方法——这是一次有明确边界的替换，不是"逐步逼近真值"。</p>
+<h2 id="5">5. 为什么没有处理增益（以及它的代价）</h2>
+<p>v1 不含脉压、相干积累、MTI/PD 滤波。后果很直接：<strong>干扰效能被高估</strong>。</p>
+<p>以 <code>02_standoff</code> 为例，1 W 的噪声干扰机、100 MHz 带宽就能把 12 km 处的目标压到
+<code>Pd = 3e-4</code>。看着不合理，但在"没有处理增益"的模型里它是自洽的：
+落进 2 MHz 接收机的只有 20 mW，而 12 km 处回波本身只有约 -67 dBm（噪声底 -108 dBm）。</p>
+<p>这个缺口写在 physics.md §7.1，也在 README 里点明了。
+<strong>发布文案里必须主动说这件事</strong>，否则懂行的人第一眼就会认定"模型是错的"。</p>
+<h2 id="6-js-sinr">6. 为什么 J/S 用 SINR 口径</h2>
+<p><code>SNR = Pr / (Pn + Pj_rx)</code>，干扰进分母。这样"干扰压制"和"检测概率下降"是同一条链，
+而不是两个互不相干的指标。代价是 Pd 对干扰功率非常敏感（<code>J/S = 1</code> 就把 SNR 砍半），
+收益是"烧穿 ≠ 能检测"这个反直觉结论是从模型里长出来的，不是编的。</p>
+<h2 id="7-r_bt-g">7. 为什么 R_bt 只有一个 G</h2>
+<p>规格里原本写 <code>R_bt ∝ G²</code>。按同一节的 <code>Pr</code> 与 <code>Pj_rx</code> 联立，接收增益 <code>Gr</code> 在两条支路里
+相消，结果应该只有一个 <code>G</code>（发射增益）。差异是 <code>sqrt(G)</code>——35 dB 时约 56 倍，
+测试不可能同时满足。</p>
+<p>处理方式：改公式、在代码注释与 physics.md §4.1 写清推导、在 PROJECT.md 留下修正记录，
+并写两条回归测试钉住"J/S 与接收增益无关""J/S 与波长无关"。
+<strong>规格与实现冲突时，先算出谁对，再改，并留下证据</strong>——这条比公式本身更值得记。</p>
+<h2 id="8-canvas-deckgl">8. 为什么是 canvas 自绘，不是 deck.gl</h2>
+<p>T2 的验收是"拖动 + 热力图 + 曲线 &lt; 100 ms"。二维、几百个图元、一张 220×220 的
+低分辨率热力图放大——canvas 足够，打包产物 230 KB（gzip 73 KB），零 WebGL 依赖。</p>
+<p>deck.gl 的优势在成千上万条轨迹与 GPU 聚合，v1 没有这种数据量。
+等 T3b 要做多平台大规模态势时再上，届时数据包结构不用变（表还是表）。</p>
+<h2 id="9">9. 现在明确不做的事</h2>
+<ul>
+<li>真实装备参数库（拿不到，也不该有）</li>
+<li>多径 / 地形遮蔽 / 大气吸收</li>
+<li>欺骗干扰、脉冲干扰、扫频干扰</li>
+<li>航迹状态机（M-of-N）——所以 <code>detected=False</code> 只代表"这一帧漏了"，不代表"丢批"</li>
+<li>3D 渲染、联网对战、LLM</li>
+</ul>
+<h2 id="10">10. 如果重来会怎么改</h2>
+<ol>
+<li><strong>先写 <code>metrics.md</code> 再写物理</strong>：<code>Pd</code> 的"单次照射 vs 累计"口径差点在实现里混掉。</li>
+<li><strong>把 replay schema 当接口先定死</strong>：一开始 <code>link</code> 与 <code>detection</code> 分两条事件，
+   事后加 <code>detection_ring_m</code> 时才发现动画依赖它。</li>
+<li><strong>早一点做截图验证</strong>：两个真 bug（坐标单位错位、红环画在红底上）都是渲染出来才暴露的，
+   单测和类型检查全绿也发现不了。</li>
+</ol>
+  </main>
+</div>
+<footer>参数全部虚构 · 仅用于教学 / 研究仿真 · Apache-2.0 + CC BY 4.0</footer>
+</body>
+</html>

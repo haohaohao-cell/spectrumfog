@@ -347,7 +347,8 @@ export function Scene({ bundle, jammer, onJammer }: SceneProps) {
 
       <footer>
         fictional parameters · educational simulation · SpectrumFog T2 · Pfa{" "}
-        {bundle.pfa.toExponential(0)} · Pd threshold {bundle.pd_threshold}
+        {bundle.pfa.toExponential(0)} · Pd threshold {bundle.pd_threshold} ·{" "}
+        <a href="./docs/index.html">文档站</a>
       </footer>
     </div>
   );

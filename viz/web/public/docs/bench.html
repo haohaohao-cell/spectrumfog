@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bench：Gym 接口、baseline 与评测（T3b） · SpectrumFog</title>
+<style>
+:root {
+  --ink: #2b2f36; --muted: #6b7178; --line: #e3e6ea; --bg: #f7f8fa;
+  --accent: #2f6fbf; --code-bg: #f2f4f7;
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); line-height: 1.7; }
+.layout { display: grid; grid-template-columns: 230px minmax(0, 880px); gap: 36px;
+          max-width: 1200px; margin: 0 auto; padding: 28px 24px 64px; }
+.side { position: sticky; top: 24px; align-self: start; font-size: 13.5px; }
+.side .brand { font-weight: 700; font-size: 15px; margin-bottom: 2px; }
+.side .sub { color: var(--muted); font-size: 12px; margin-bottom: 18px; }
+.side a { display: block; color: var(--ink); text-decoration: none; padding: 3px 0; }
+.side a:hover { color: var(--accent); }
+.side a.active { color: var(--accent); font-weight: 600; }
+.side .tag { color: var(--muted); font-size: 11.5px; padding-left: 0; }
+.side hr { border: 0; border-top: 1px solid var(--line); margin: 14px 0; }
+.side .back { color: var(--muted); font-size: 12.5px; }
+main { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 28px 34px 40px; }
+main > h1:first-child { margin-top: 0; }
+h1 { font-size: 26px; } h2 { font-size: 20px; margin-top: 34px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+h3 { font-size: 16.5px; margin-top: 26px; }
+a { color: var(--accent); }
+code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; font-size: 0.92em;
+       font-family: "Cascadia Mono", "Consolas", monospace; }
+pre { background: #f6f8fa; border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px;
+      overflow-x: auto; }
+pre code { background: none; padding: 0; font-size: 12.5px; line-height: 1.55; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; margin: 14px 0; }
+th, td { border: 1px solid var(--line); padding: 6px 9px; text-align: left; vertical-align: top; }
+th { background: #f6f8fa; }
+blockquote { margin: 14px 0; padding: 6px 16px; border-left: 3px solid var(--accent);
+             color: var(--muted); background: #f8fafc; }
+img { max-width: 100%; border-radius: 8px; border: 1px solid var(--line); }
+hr { border: 0; border-top: 1px solid var(--line); margin: 26px 0; }
+footer { max-width: 1200px; margin: 0 auto; padding: 0 24px 40px; color: var(--muted); font-size: 12px; }
+@media (max-width: 820px) {
+  .layout { grid-template-columns: 1fr; }
+  .side { position: static; }
+  main { padding: 20px; }
+}
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="side">
+    <div class="brand">SpectrumFog</div>
+    <div class="sub">频谱迷雾 · 文档</div>
+    <a class="nav" href="index.html">概览</a><span class="tag">从零到跑起来</span>
+    <a class="nav" href="physics.html">物理</a><span class="tag">公式、假设、缺口</span>
+    <a class="nav" href="design.html">设计取舍</a><span class="tag">为什么这么做</span>
+    <a class="nav" href="scenario.html">想定格式</a><span class="tag">YAML schema</span>
+    <a class="nav" href="metrics.html">指标</a><span class="tag">Pd / CEP / 暴露</span>
+    <a class="nav active" href="bench.html">评测</a><span class="tag">Gym 环境与 baseline</span>
+    <a class="nav" href="web.html">网页数据包</a><span class="tag">前端不算物理</span>
+    <a class="nav" href="roadmap.html">路线图</a><span class="tag">里程碑与验收</span>
+    <hr>
+    <a class="back" href="../index.html">← 打开交互演示</a>
+    <a class="back" href="https://github.com/haohaohao-cell/spectrumfog">GitHub 仓库</a>
+  </aside>
+  <main>
+<h1 id="benchgym-baseline-t3b">Bench：Gym 接口、baseline 与评测（T3b）</h1>
+<h2 id="_1">这一层是什么</h2>
+<p>把想定变成一个<strong>决策问题</strong>，然后给几个"不动脑子"的策略打分：</p>
+<pre><code>想定 + 物理（Python，唯一实现）
+        │
+        ├── spectrumfog sim    → replay / 动画 / AAR
+        └── spectrumfog bench  → Gym 环境 → 策略 → 表格
+</code></pre>
+<p>环境和 <code>sim</code> 调的是同一批函数（<code>radar</code> / <code>detect</code> / <code>fusion</code>），
+区别只是"谁来决定下一步动作"。所以表格里的数字和 AAR 里的数字是同一套物理。</p>
+<h2 id="_2">环境契约</h2>
+<table>
+<thead>
+<tr>
+<th>项</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>智能体</td>
+<td>红方干扰机（单智能体）</td>
+</tr>
+<tr>
+<td>观测</td>
+<td><code>Box(6)</code>：<code>[x, y, 功率档, 时间进度, 相对距离, 告警位]</code></td>
+</tr>
+<tr>
+<td>动作</td>
+<td><code>Discrete(15)</code> = 方向(5) × 功率档(3)：停/±x/±y × 关机/半功率/满功率</td>
+</tr>
+<tr>
+<td>一步</td>
+<td>想定的一个 tick（01_duel 1 s、其余 2 s）</td>
+</tr>
+<tr>
+<td>终止</td>
+<td>达到想定时长（<code>duration / dt</code> 步）</td>
+</tr>
+<tr>
+<td>奖励</td>
+<td><code>+1</code> 达成目标／<code>−1</code> 被有效定位（CEP ≤ 门槛）／<code>−0.02 × 功率档</code></td>
+</tr>
+</tbody>
+</table>
+<p>"达成目标"看干扰机打的是谁：与雷达同频 → <strong>干扰有效</strong>（目标处 Pd &lt; 0.5）；
+与雷达不同频、但与某条通信链路同频 → <strong>链路失效</strong>（抗干扰余量 &lt; 0）。
+这就是 03_triad 那行 J/S 为 0 的原因：它在打链路，不在打雷达。</p>
+<p><strong>部分可观测落在哪</strong>：蓝方的定位结果对红方不可见。红方只有一个<strong>延迟告警</strong>——
+最近 <code>warning_window_s</code> 秒内是否被"有效定位"。真实 CEP 不进观测。
+这正是 AAR 那句"你被定位了"的反面：当局者不知道自己被定到多少米。</p>
+<p><code>相对距离 = |位置| / 初始距离</code>，1.0 表示还在出发位置。这样策略不用知道米数，
+换一个想定也不用改阈值。</p>
+<h2 id="baseline">三个 baseline</h2>
+<table>
+<thead>
+<tr>
+<th>名字</th>
+<th>行为</th>
+<th>想验证什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>random</code></td>
+<td>均匀随机动作</td>
+<td>下限</td>
+</tr>
+<tr>
+<td><code>always-jam</code></td>
+<td>原地满功率</td>
+<td>"只管压制、不管暴露"能走多远</td>
+</tr>
+<tr>
+<td><code>stealth</code></td>
+<td>静默接近 → 贴脸开火 → 收到告警就关机关后撤 5 帧</td>
+<td>"隐蔽优先"是否划算</td>
+</tr>
+</tbody>
+</table>
+<p>三个都只吃观测（<code>act(observation)</code>），不读环境私有状态——否则等于用未来数据作弊。</p>
+<h2 id="_3">跑</h2>
+<pre><code class="language-bash">spectrumfog bench --all --episodes 5
+spectrumfog bench --scenario scenarios/01_duel.yaml --episodes 10
+spectrumfog bench --all --out out/bench.json --markdown out/leaderboard.md
+</code></pre>
+<p>同一 seed 下所有策略看到<strong>同一串随机数</strong>，所以差异来自决策，不来自运气。</p>
+<h2 id="2026-10-275-3-2">当前结果（2026-10-27，5 个想定 × 3 策略 × 2 局）</h2>
+<pre><code>scenario       policy             reward  jammed  exposed  Pd mean   J/S mean     首告警[s]
+----------------------------------------------------------------------------------------
+01_duel        always-jam     281.0± 16    100%      51%    0.000      85.63          2
+01_duel        random         223.9± 13     68%      30%    0.305      54.71          5
+01_duel        stealth          3.5±  3      4%       3%    0.917      53.66         46
+02_standoff    stealth          3.8±  3      7%       3%    0.952       0.01         95
+02_standoff    random          -1.6±  1      0%       0%    0.957       0.00        206
+02_standoff    always-jam      -3.4±  0      0%       1%    0.919       0.01        127
+03_triad       stealth          0.0±  0      0%       0%    0.861       0.00          —
+03_triad       random         -37.5±  4      0%      62%    0.861       0.00          4
+03_triad       always-jam     -61.2±  0      0%     100%    0.861       0.00          2
+04_fog         always-jam      49.3±  4    100%      16%    0.000      43.25         11
+04_fog         random          35.0±  3     62%       3%    0.351      22.70         51
+04_fog         stealth          1.9±  2      7%       3%    0.875      55.13         48
+05_mobile      always-jam      81.7±  3    100%       7%    0.002       1.52         25
+05_mobile      random          51.2±  3     64%       6%    0.362       0.73         37
+05_mobile      stealth          0.4±  0      4%       3%    0.952       1.24         88
+06_decoy       stealth         60.0±  0    100%       0%    0.363       0.00          —
+06_decoy       random          59.5±  0    100%       0%    0.137       0.55          —
+06_decoy       always-jam      58.8±  0    100%       0%    0.000       1.17          —
+</code></pre>
+<p><strong>怎么读</strong>：</p>
+<ul>
+<li><code>01_duel</code> 里 90 W 的干扰机在 30 km 就足以把 Pd 压到 1e-6，所以"根本不用靠近"——
+  蛮干（always-jam）赢；<code>stealth</code> 非要偷偷摸到 7.5 km 才开机，白白浪费 40 秒。</li>
+<li><code>02_standoff</code> 里只有 1 W，60 km 处压不住任何东西，必须贴脸——
+  但贴脸就意味着被三站交汇定位，所以它只能"打一下就跑"，成功率 7%。</li>
+<li><code>03_triad</code> 是<strong>链路场景</strong>：主干扰机（300 MHz）和雷达（3 GHz）不同频，
+  环境因此切到"打链路"模式（J/S 列是 0，Pd 是未被干扰的 0.861）。
+  三个 baseline 都是雷达思路，谁也不会往接收机那边靠，所以全是负分——
+  这不是环境坏了，是 baseline 不对口，提升空间就在这里。</li>
+<li><code>04_fog</code> 有 3 个红方辐射源、虚警率 5e-3，蛮干反而能压住（Pd 0）且暴露只有 16%，
+  因为它的干扰机离雷达最近、离 ESM 最远。</li>
+<li><code>05_mobile</code> 三方都在动，蛮干仍然赢——说明在这组参数下"机动"没有改变力量对比。</li>
+</ul>
+<p><strong>没有一个策略通吃</strong>。这不是 bug：几份想定的能量差两个数量级，
+"最优打法"本来就不同——这也是为什么要有 benchmark，而不是一个调好的 demo。</p>
+<h2 id="_4">排行榜</h2>
+<p><code>--markdown out/leaderboard.md</code> 生成：</p>
+<table>
+<thead>
+<tr>
+<th>想定</th>
+<th>策略</th>
+<th>奖励（均值±标准差）</th>
+<th>干扰有效率</th>
+<th>暴露率</th>
+<th>Pd 均值</th>
+<th>首告警</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>01_duel</td>
+<td><code>always-jam</code></td>
+<td>289.3 ± 18</td>
+<td>100%</td>
+<td>50%</td>
+<td>0.000</td>
+<td>2 s</td>
+</tr>
+</tbody>
+</table>
+<p>现在只有本地排行榜（自己跑、自己贴表）。公开提交（带签名的 JSON + PR）属于 T3b 的后半段，
+还没做——因为那需要先固定想定集合的版本号，否则表不可比。</p>
+<h2 id="_5">加一个策略</h2>
+<p>实现两个方法即可：</p>
+<pre><code class="language-python">class MyPolicy:
+    name = &quot;my-policy&quot;
+    def reset(self, *, seed=None) -&gt; None: ...
+    def act(self, observation) -&gt; int:
+        # observation = [x, y, power, t, relative_range, warning]
+        return 0 * 3 + 2   # 停 + 满功率
+</code></pre>
+<p>然后 <code>spectrumfog bench --all --policies random,always-jam,stealth,my-policy</code>
+（策略要先注册进 <code>bench/policies.py</code> 的 <code>POLICIES</code>）。</p>
+<h2 id="_6">已知限制</h2>
+<ol>
+<li><strong>单智能体</strong>：只控制红方干扰机；蓝方（雷达 + ESM 星座）是环境的一部分。</li>
+<li><strong>动作离散</strong>：没有连续功率/航向；也没做动作屏蔽（不合法的动作不会出现，但也没优化）。</li>
+<li><strong>环境不写 replay</strong>：训练用不到逐帧回放；要复盘就改用 <code>sim</code> + <code>aar</code>。</li>
+<li><strong>没做向量化环境</strong>：跑 5 个种子是串行的，单局 120 步在 1 秒以内，暂时够用。</li>
+<li><strong>5 个想定已就位</strong>（01_duel / 02_standoff / 03_triad / 04_fog / 05_mobile）。
+   诱饵（欺骗式假目标）仍未建模，03_triad 用"双频段干扰"替代了它。</li>
+</ol>
+  </main>
+</div>
+<footer>参数全部虚构 · 仅用于教学 / 研究仿真 · Apache-2.0 + CC BY 4.0</footer>
+</body>
+</html>

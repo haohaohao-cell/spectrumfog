@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>指标定义（全项目唯一口径） · SpectrumFog</title>
+<style>
+:root {
+  --ink: #2b2f36; --muted: #6b7178; --line: #e3e6ea; --bg: #f7f8fa;
+  --accent: #2f6fbf; --code-bg: #f2f4f7;
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); line-height: 1.7; }
+.layout { display: grid; grid-template-columns: 230px minmax(0, 880px); gap: 36px;
+          max-width: 1200px; margin: 0 auto; padding: 28px 24px 64px; }
+.side { position: sticky; top: 24px; align-self: start; font-size: 13.5px; }
+.side .brand { font-weight: 700; font-size: 15px; margin-bottom: 2px; }
+.side .sub { color: var(--muted); font-size: 12px; margin-bottom: 18px; }
+.side a { display: block; color: var(--ink); text-decoration: none; padding: 3px 0; }
+.side a:hover { color: var(--accent); }
+.side a.active { color: var(--accent); font-weight: 600; }
+.side .tag { color: var(--muted); font-size: 11.5px; padding-left: 0; }
+.side hr { border: 0; border-top: 1px solid var(--line); margin: 14px 0; }
+.side .back { color: var(--muted); font-size: 12.5px; }
+main { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 28px 34px 40px; }
+main > h1:first-child { margin-top: 0; }
+h1 { font-size: 26px; } h2 { font-size: 20px; margin-top: 34px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+h3 { font-size: 16.5px; margin-top: 26px; }
+a { color: var(--accent); }
+code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; font-size: 0.92em;
+       font-family: "Cascadia Mono", "Consolas", monospace; }
+pre { background: #f6f8fa; border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px;
+      overflow-x: auto; }
+pre code { background: none; padding: 0; font-size: 12.5px; line-height: 1.55; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; margin: 14px 0; }
+th, td { border: 1px solid var(--line); padding: 6px 9px; text-align: left; vertical-align: top; }
+th { background: #f6f8fa; }
+blockquote { margin: 14px 0; padding: 6px 16px; border-left: 3px solid var(--accent);
+             color: var(--muted); background: #f8fafc; }
+img { max-width: 100%; border-radius: 8px; border: 1px solid var(--line); }
+hr { border: 0; border-top: 1px solid var(--line); margin: 26px 0; }
+footer { max-width: 1200px; margin: 0 auto; padding: 0 24px 40px; color: var(--muted); font-size: 12px; }
+@media (max-width: 820px) {
+  .layout { grid-template-columns: 1fr; }
+  .side { position: static; }
+  main { padding: 20px; }
+}
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="side">
+    <div class="brand">SpectrumFog</div>
+    <div class="sub">频谱迷雾 · 文档</div>
+    <a class="nav" href="index.html">概览</a><span class="tag">从零到跑起来</span>
+    <a class="nav" href="physics.html">物理</a><span class="tag">公式、假设、缺口</span>
+    <a class="nav" href="design.html">设计取舍</a><span class="tag">为什么这么做</span>
+    <a class="nav" href="scenario.html">想定格式</a><span class="tag">YAML schema</span>
+    <a class="nav active" href="metrics.html">指标</a><span class="tag">Pd / CEP / 暴露</span>
+    <a class="nav" href="bench.html">评测</a><span class="tag">Gym 环境与 baseline</span>
+    <a class="nav" href="web.html">网页数据包</a><span class="tag">前端不算物理</span>
+    <a class="nav" href="roadmap.html">路线图</a><span class="tag">里程碑与验收</span>
+    <hr>
+    <a class="back" href="../index.html">← 打开交互演示</a>
+    <a class="back" href="https://github.com/haohaohao-cell/spectrumfog">GitHub 仓库</a>
+  </aside>
+  <main>
+<h1 id="_1">指标定义（全项目唯一口径）</h1>
+<blockquote>
+<p>PROJECT.md §8 要求所有指标在这里定义一次，CLI / Web / Gym / AAR 都引用本文件，
+不许各自另立口径。实现状态列标明当前是否已有代码。</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th>定义</th>
+<th>方向</th>
+<th>实现</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Pd</strong></td>
+<td>单次照射的检测概率</td>
+<td>越高越好</td>
+<td>✅ <code>physics.radar.pd_swerling1</code></td>
+</tr>
+<tr>
+<td><strong>CEP50 / CEP90</strong></td>
+<td>定位误差圆半径（50% / 90% 分位）</td>
+<td>越低越好</td>
+<td>✅ <code>metrics.cep_from_samples</code>（T3a）</td>
+</tr>
+<tr>
+<td><strong>T_expose</strong></td>
+<td>己方辐射源被对方有效定位的持续时间</td>
+<td>越短越好</td>
+<td>✅ <code>metrics.t_expose</code>（T3a）</td>
+</tr>
+<tr>
+<td><strong>Link_avail</strong></td>
+<td>链路可用时间占比（AJ margin &gt; 0）</td>
+<td>越高越好</td>
+<td>⬜ 公式已在 <code>physics.comms</code>，引擎未接</td>
+</tr>
+<tr>
+<td><strong>ID_acc</strong></td>
+<td>辐射源型号识别正确率</td>
+<td>越高越好</td>
+<td>⬜ T3b（识别还没做）</td>
+</tr>
+<tr>
+<td><strong>Score</strong></td>
+<td>上述指标的加权向量</td>
+<td>—</td>
+<td>⬜ T3b</td>
+</tr>
+</tbody>
+</table>
+<h2 id="1-pd">1. Pd — 单次照射检测概率</h2>
+<pre><code>SNR = Pr / (Pn + Pj_rx)        # SINR 口径，含噪声压制干扰
+Pd  = Pfa ^ (1 / (1 + SNR))    # Swerling I 单脉冲闭式
+</code></pre>
+<ul>
+<li>输入：<code>Pr</code>、<code>Pn</code>、<code>Pj_rx</code> 全是线性功率（W），<code>Pfa</code> 是概率。</li>
+<li><strong>口径注意</strong>：Pd 是"单次照射"的概率，不是"一段时间内至少检测一次"。
+  后者（累计检测概率）在 T1 的 <code>engine/detect.py</code> 里由多次照射的独立假设合成，
+  计算方式是 <code>P_detect_cum = 1 - Π(1 - Pd_i)</code>，届时单独列出，不与 Pd 混称。</li>
+<li><strong>T1 实现</strong>：replay 里每个 tick 记两样东西 —— <code>link.pd</code>（模型概率，确定性）与
+  <code>detection.detected</code>（一次 Bernoulli 抽样）。动画里的 TRACKING/JAMMED 用的是
+  <code>pd</code> 与门槛比较（确定性），抽样结果只作为参考阶梯线。
+  <strong>单次漏检不等于丢批</strong>：没有航迹维持（M-of-N）之前，不许把 <code>detected=False</code>
+  统计成"目标丢失"。等 T3a 的 <code>detect.py</code> 引入航迹状态机，再定义 "track lost"。</li>
+<li>复现用参数：<code>Pfa</code> 默认 1e-6，必须在想定或 CLI 里显式给出并写进 replay。</li>
+</ul>
+<h2 id="2-cep50-cep90">2. CEP50 / CEP90 — 定位误差圆</h2>
+<p>对某个辐射源的一组定位估计 <code>p̂_i</code>（真值 <code>p_i</code>，均在同一坐标系、单位米）：</p>
+<pre><code>e_i     = || p̂_i - p_i ||                  # 单次定位误差 [m]
+CEP50   = median(e)                         # 50% 分位
+CEP90   = percentile(e, 90)                 # 90% 分位
+</code></pre>
+<ul>
+<li>均匀分布假设下 <code>CEP50 = 0.5 · R_max</code>；二维圆高斯近似下 <code>CEP50 ≈ 1.1774 σ</code>。
+  两种近似只用于 sanity check，<strong>指标本身一律用样本分位数</strong>，不用近似公式。</li>
+<li>样本量 &lt; 30 时必须在报告里注明样本量，否则分位数没有意义。</li>
+<li>想定里的 <code>objectives[].cep_m</code> 是<strong>门槛</strong>，不是指标值：
+  <code>CEP50 ≤ cep_m</code> 视为该目标达成。</li>
+</ul>
+<h2 id="3-t_expose">3. T_expose — 暴露时长</h2>
+<p>己方辐射源被对方"有效定位"的累计时间：</p>
+<pre><code>T_expose = dt · #{ t : CEP50(t) ≤ cep_threshold, 且估计来自对方传感器 }
+</code></pre>
+<ul>
+<li><code>cep_threshold</code> 取自想定 <code>objectives[].cep_m</code>；没给就用默认 500 m（写进 replay 的 meta）。</li>
+<li>只有"有效定位"的 tick 才计入；漏检、虚假目标导致的错误估计不计入暴露。</li>
+<li>单位秒（tick 数 × <code>meta.dt</code>），不是 tick 数。</li>
+</ul>
+<h2 id="4-link_avail">4. Link_avail — 链路可用率</h2>
+<pre><code>AJ_margin_dB = Gp + Mc - required_JS_dB
+Link_avail   = dt · #{ t : AJ_margin_dB(t) &gt; 0 } / duration
+</code></pre>
+<ul>
+<li><code>Gp</code>（处理增益）、<code>Mc</code>（编码增益）由想定给定（虚构值），<code>required_JS_dB</code> 是链路能容忍的干信比。</li>
+<li>返回值是 0–1 的<strong>占比</strong>；tick 数只在内部用。</li>
+<li>实现位置：<code>physics.comms.aj_margin_db</code> + <code>link_available</code>（公式已就位，引擎接入在 T1）。</li>
+</ul>
+<h2 id="5-id_acc">5. ID_acc — 识别正确率</h2>
+<pre><code>ID_acc = 识别正确的辐射源数 / 被识别的辐射源数
+</code></pre>
+<ul>
+<li>"识别"指 <code>kind</code> / 型号标签的正确判定；拒识（放弃判定）不计入分母，但必须单独报告拒识率，
+  否则"全拒识 = 100% 正确"这种退化策略会刷榜。</li>
+<li>v1 的识别特征是频率、带宽、PRI 等虚构参数；T3a 才做归因。</li>
+</ul>
+<h2 id="6-score">6. Score — 多目标评分向量</h2>
+<p>不用"血量"，用向量（PROJECT.md §4）。想定里给权重：</p>
+<pre><code class="language-yaml"># 计划中的 schema（T3b 落地，现在还不被解析）
+score:
+  weights: {cep50: 0.4, id_acc: 0.3, t_expose: 0.2, link_avail: 0.1}
+</code></pre>
+<pre><code>Score = Σ_i w_i · normalize_i(metric_i)
+</code></pre>
+<ul>
+<li><code>normalize_i</code> 把各指标映射到 0–1，方向已在上表统一（越低越好的先取反）。</li>
+<li><strong>必须同时输出向量本身</strong>，不能只给标量分：排行榜上"分高"和"分高的原因"是两件事，
+  后者由 T3a 的 AAR 回答。</li>
+<li>权重写进想定（可复现），不进代码常量。</li>
+</ul>
+<h2 id="7">7. 复现要求</h2>
+<p>每个指标在 replay 里必须自带<strong>计算它所需的最小信息</strong>（一行一个事件、可独立解析）：
+<code>Pfa</code>、<code>cep_threshold</code>、<code>dt</code>、所用传感器 id。任何指标都能从 replay 单独重算，
+不依赖内存中的中间状态（PROJECT.md §2 决策 1）。</p>
+<h2 id="8-aar-t3a">8. AAR 的归因口径（T3a）</h2>
+<p><code>spectrumfog aar</code> 生成的结论句里，"原因是 X" 不是形容词，是三件事：</p>
+<ol>
+<li><strong>谁参与了</strong>：这一帧解出位置用到了哪几台传感器的量测（<code>estimate.sensors</code>）。</li>
+<li><strong>留一法</strong>：依次去掉每台传感器重解一次，看误差怎么变。去掉就解不出位置的
+   记为"决定性"；去掉后误差变大最多的那台，就是结论句里点名的那个。</li>
+<li><strong>哪类量测在撑精度</strong>：把测向或 TDOA 单独喂给解算器，用<strong>自报协方差</strong>算 CEP。
+   两者相差 1.5 倍以上才写进结论（否则"都一样"没有信息量）。</li>
+</ol>
+<p>注意：报告里同时给"自报 CEP"和"真实误差"。前者是操作员能看到的，后者是复盘才知道的；
+两者的比值就是滤波器的自信程度——差太多说明协方差不可信。</p>
+<p><strong>暴露时长用自报 CEP 判定</strong>（操作员视角：他以为定住了就算暴露）；
+真实误差只用来评估这套估计到底准不准。两套口径都在报告里，不许混用。</p>
+  </main>
+</div>
+<footer>参数全部虚构 · 仅用于教学 / 研究仿真 · Apache-2.0 + CC BY 4.0</footer>
+</body>
+</html>

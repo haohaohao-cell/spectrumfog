@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Web 层：数据包格式（T2） · SpectrumFog</title>
+<style>
+:root {
+  --ink: #2b2f36; --muted: #6b7178; --line: #e3e6ea; --bg: #f7f8fa;
+  --accent: #2f6fbf; --code-bg: #f2f4f7;
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); line-height: 1.7; }
+.layout { display: grid; grid-template-columns: 230px minmax(0, 880px); gap: 36px;
+          max-width: 1200px; margin: 0 auto; padding: 28px 24px 64px; }
+.side { position: sticky; top: 24px; align-self: start; font-size: 13.5px; }
+.side .brand { font-weight: 700; font-size: 15px; margin-bottom: 2px; }
+.side .sub { color: var(--muted); font-size: 12px; margin-bottom: 18px; }
+.side a { display: block; color: var(--ink); text-decoration: none; padding: 3px 0; }
+.side a:hover { color: var(--accent); }
+.side a.active { color: var(--accent); font-weight: 600; }
+.side .tag { color: var(--muted); font-size: 11.5px; padding-left: 0; }
+.side hr { border: 0; border-top: 1px solid var(--line); margin: 14px 0; }
+.side .back { color: var(--muted); font-size: 12.5px; }
+main { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 28px 34px 40px; }
+main > h1:first-child { margin-top: 0; }
+h1 { font-size: 26px; } h2 { font-size: 20px; margin-top: 34px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+h3 { font-size: 16.5px; margin-top: 26px; }
+a { color: var(--accent); }
+code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; font-size: 0.92em;
+       font-family: "Cascadia Mono", "Consolas", monospace; }
+pre { background: #f6f8fa; border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px;
+      overflow-x: auto; }
+pre code { background: none; padding: 0; font-size: 12.5px; line-height: 1.55; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; margin: 14px 0; }
+th, td { border: 1px solid var(--line); padding: 6px 9px; text-align: left; vertical-align: top; }
+th { background: #f6f8fa; }
+blockquote { margin: 14px 0; padding: 6px 16px; border-left: 3px solid var(--accent);
+             color: var(--muted); background: #f8fafc; }
+img { max-width: 100%; border-radius: 8px; border: 1px solid var(--line); }
+hr { border: 0; border-top: 1px solid var(--line); margin: 26px 0; }
+footer { max-width: 1200px; margin: 0 auto; padding: 0 24px 40px; color: var(--muted); font-size: 12px; }
+@media (max-width: 820px) {
+  .layout { grid-template-columns: 1fr; }
+  .side { position: static; }
+  main { padding: 20px; }
+}
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="side">
+    <div class="brand">SpectrumFog</div>
+    <div class="sub">频谱迷雾 · 文档</div>
+    <a class="nav" href="index.html">概览</a><span class="tag">从零到跑起来</span>
+    <a class="nav" href="physics.html">物理</a><span class="tag">公式、假设、缺口</span>
+    <a class="nav" href="design.html">设计取舍</a><span class="tag">为什么这么做</span>
+    <a class="nav" href="scenario.html">想定格式</a><span class="tag">YAML schema</span>
+    <a class="nav" href="metrics.html">指标</a><span class="tag">Pd / CEP / 暴露</span>
+    <a class="nav" href="bench.html">评测</a><span class="tag">Gym 环境与 baseline</span>
+    <a class="nav active" href="web.html">网页数据包</a><span class="tag">前端不算物理</span>
+    <a class="nav" href="roadmap.html">路线图</a><span class="tag">里程碑与验收</span>
+    <hr>
+    <a class="back" href="../index.html">← 打开交互演示</a>
+    <a class="back" href="https://github.com/haohaohao-cell/spectrumfog">GitHub 仓库</a>
+  </aside>
+  <main>
+<h1 id="web-t2">Web 层：数据包格式（T2）</h1>
+<h2 id="_1">为什么不是"前端再算一遍"</h2>
+<p>PROJECT.md §2 决策 3：一个内核三个面，同一份物理，不许前后端各写一套。
+T2 又要求无后端。两条同时成立的唯一做法：</p>
+<pre><code>spectrumfog（Python，唯一物理实现）
+        │  export-web 编译一次
+        ▼
+data.json（Pd/JS 的 (Rt, Rj) 二维表 + 三条 1D 曲线 + 元数据）
+        │  前端只做：查表、双线性插值、画图
+        ▼
+浏览器（拖动干扰机 → 重新查表 → &lt;100 ms 刷新）
+</code></pre>
+<p>前端<strong>不含任何公式</strong>。想改物理必须改 Python，然后重新导出——
+这样不会出现"网页上的数和 CLI 的数对不上"这种最伤可信度的问题。</p>
+<h2 id="_2">生成</h2>
+<pre><code class="language-bash">spectrumfog export-web scenarios/02_standoff.yaml -o viz/web/public/data.json
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>默认</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--out</code></td>
+<td><code>out/&lt;name&gt;.web.json</code></td>
+<td>输出路径</td>
+</tr>
+<tr>
+<td><code>--pfa</code></td>
+<td>1e-6</td>
+<td>虚警概率</td>
+</tr>
+<tr>
+<td><code>--pd-threshold</code></td>
+<td>0.5</td>
+<td>检测门槛（画环与判"可检测"用）</td>
+</tr>
+<tr>
+<td><code>--samples</code></td>
+<td>97</td>
+<td>二维表每轴采样数；体积 ∝ n²</td>
+</tr>
+</tbody>
+</table>
+<p>97×97 的 <code>02_standoff</code> 数据包约 126 KB（两张表各 ~76 KB base64 前的原始 float32 是 37 KB）。</p>
+<h2 id="_3">结构</h2>
+<pre><code class="language-jsonc">{
+  &quot;schema&quot;: &quot;spectrumfog.web/1&quot;,     // 前端不认识的版本必须报错，不许猜
+  &quot;units&quot;: &quot;SI: m, W, Hz, s&quot;,
+  &quot;scenario&quot;: &quot;02_standoff&quot;,
+  &quot;pfa&quot;: 1e-06,
+  &quot;pd_threshold&quot;: 0.5,
+  &quot;noise_power_w&quot;: 1.5978e-14,
+
+  &quot;radar&quot;:  { &quot;id&quot;: &quot;radar_a&quot;, &quot;pos_m&quot;: [0,0], &quot;freq_hz&quot;: 3e9, &quot;bw_hz&quot;: 2e6,
+              &quot;pt_w&quot;: 1.5e5, &quot;gain_db&quot;: 35, &quot;sigma_m2&quot;: 1.0, &quot;loss_db&quot;: 3 },
+  &quot;jammer&quot;: { &quot;id&quot;: &quot;jammer_b&quot;, &quot;pos_m&quot;: [6e4,0], &quot;bw_hz&quot;: 1e8, &quot;pj_w&quot;: 1.0, &quot;gain_db&quot;: 0 },
+  &quot;target&quot;: { &quot;id&quot;: &quot;target_c&quot;, &quot;pos_m&quot;: [9830,6880], &quot;range_m&quot;: 11998 },
+
+  &quot;grid&quot;: {
+    &quot;rt_m&quot;: { &quot;min&quot;: 100, &quot;max&quot;: 5e5, &quot;n&quot;: 97 },   // 目标距离轴
+    &quot;rj_m&quot;: { &quot;min&quot;: 100, &quot;max&quot;: 1e6, &quot;n&quot;: 97 },   // 干扰机距离轴
+    &quot;spacing&quot;: &quot;log10&quot;,                            // 轴上的点是 geomspace
+    &quot;units&quot;: &quot;m&quot;
+  },
+
+  &quot;pd&quot;: { &quot;dtype&quot;: &quot;float32&quot;, &quot;shape&quot;: [97,97], &quot;data&quot;: &quot;&lt;base64 小端&gt;&quot; },  // [Rj, Rt]
+  &quot;js&quot;: { &quot;dtype&quot;: &quot;float32&quot;, &quot;shape&quot;: [97,97], &quot;data&quot;: &quot;&lt;base64 小端&gt;&quot; },
+
+  &quot;rings&quot;: {
+    &quot;jammer_range_m&quot;: [...],       // 241 点
+    &quot;detection_m&quot;:  [...],         // Pd = 门槛 的边界半径，随 Rj 增大
+    &quot;burn_through_m&quot;: [...]        // J/S = 1 的环，= sqrt(R_bt · Rj)
+  },
+
+  &quot;target_curves&quot;: { &quot;jammer_range_m&quot;: [...], &quot;pd&quot;: [...], &quot;js&quot;: [...] }
+}
+</code></pre>
+<h3 id="_4">查表约定</h3>
+<ul>
+<li><code>pd[i][j]</code> 对应 <code>Rt = geomspace(rt_m)*[j]</code>、<code>Rj = geomspace(rj_m)*[i]</code>（行 = 干扰机距离）。</li>
+<li>地图上任意一点 <code>p</code>：<code>Rt = |p - radar|</code>、<code>Rj = |p - jammer|</code>，双线性插值取值。</li>
+<li>插值在 <strong>log 空间</strong>做（两个轴都是 <code>geomspace</code>），否则近距段的曲线会明显失真。</li>
+<li><code>rings.*</code> 用普通数组，不需要插值：前端按 <code>Rj</code> 找最近的网格点即可（241 点足够密）。</li>
+</ul>
+<h2 id="_5">前端约定</h2>
+<ul>
+<li>页面只读 <code>data.json</code>，不发请求、不写状态到服务器（GitHub Pages 纯静态）。</li>
+<li>拖动干扰机时，每帧最多做 220×220 次查表（canvas 是低分辨率再放大），
+  不需要 Web Worker；目标 &lt;100 ms，实测在开发机上 &lt;10 ms。</li>
+<li>版本不符（<code>schema !== "spectrumfog.web/1"</code>）直接显示错误，不要降级渲染。</li>
+</ul>
+<h2 id="_6">本地跑</h2>
+<pre><code class="language-bash"># 1) 生成数据（改了想定或物理就要重跑这一步）
+spectrumfog export-web scenarios/02_standoff.yaml -o viz/web/public/data.json
+
+# 2) 开发模式
+cd viz/web
+npm install
+npm run dev          # http://localhost:5173
+
+# 3) 生产构建（纯静态，dist/ 直接丢 GitHub Pages）
+npm run build
+npm run preview
+
+# 4) 前端单测（查表逻辑 + 首屏渲染）
+npm test
+</code></pre>
+<h2 id="_7">验证状态（诚实记录）</h2>
+<p>已验证：</p>
+<ul>
+<li><code>npm run build</code> 通过（tsc 类型检查 + vite 打包，JS 230 KB / gzip 73 KB，无 WebGL 依赖）；</li>
+<li>16 项前端单测通过：解码、log 遍历、双线性插值、环插值、越界夹取、
+  用真实数据包做首屏 SSR 渲染（TRACKING / JAMMED 两种状态）；</li>
+<li>静态产物经 <code>vite preview</code> 实测：<code>index.html</code>、<code>data.json</code>、JS/CSS 均 200；</li>
+<li><strong>headless Chrome 截图</strong>（<code>docs/images/web_explorer.png</code>）：初始 60 km 处为 TRACKING，
+  干扰机贴到 15 km 时切换为 JAMMED、边界从 20.5 km 缩到 10.4 km、Pd 从 0.92 掉到 0.31。</li>
+</ul>
+<p><strong>未验证</strong>（本机没有交互式浏览器，只能靠你点一下）：</p>
+<ul>
+<li>拖动的手感与帧率。若明显卡顿，先把 <code>App.tsx</code> 里的 <code>HEAT</code> 从 220 降到 160；</li>
+<li>地图与曲线在高 DPI 屏上的清晰度；</li>
+<li>移动端触摸拖动。</li>
+</ul>
+<p>截图命令（无浏览器环境也能复现）：</p>
+<pre><code class="language-bash">npm run build &amp;&amp; npm run preview -- --port 4321
+&quot;C:\Program Files\Google\Chrome\Application\chrome.exe&quot; \
+  --headless=new --disable-gpu --window-size=1200,860 \
+  --virtual-time-budget=8000 --screenshot=shot.png http://localhost:4321/
+</code></pre>
+<h2 id="deckgl">为什么没用 deck.gl</h2>
+<p>T2 的验收是"拖动 + 热力图 + 曲线 &lt;100 ms"，二维、几百个图元，canvas 自绘足够。
+deck.gl 会带来 ~1 MB 的 WebGL 依赖和一层 GPU 抽象，在只有一个热力图的页面上不划算。
+等 T3b 要做多平台 / 大规模轨迹时再上 deck.gl，届时的数据包可以复用同一份表。</p>
+  </main>
+</div>
+<footer>参数全部虚构 · 仅用于教学 / 研究仿真 · Apache-2.0 + CC BY 4.0</footer>
+</body>
+</html>

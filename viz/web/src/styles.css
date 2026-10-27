@@ -261,6 +261,17 @@ footer {
   font-size: 11px;
 }
 
+footer a {
+  color: var(--muted);
+  text-decoration: none;
+  border-bottom: 1px dotted var(--muted);
+}
+
+footer a:hover {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
 .fatal,
 .loading {
   max-width: 720px;

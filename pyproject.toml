@@ -26,6 +26,8 @@ dependencies = [
 dev = ["pytest>=7.0"]
 # T1 之后才会用到，先不装：
 bench = ["gymnasium>=1.0"]
+# 只用于生成文档站（tools/build_docs.py），内核不依赖：
+docs = ["markdown>=3.5"]
 
 [project.scripts]
 spectrumfog = "spectrumfog.cli:main"
