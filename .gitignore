@@ -24,6 +24,7 @@ out/
 .DS_Store
 Thumbs.db
 
-# --- T2 前端（届时取消注释） ---
-# viz/web/node_modules/
-# viz/web/dist/
+# --- T2 前端 ---
+viz/web/node_modules/
+viz/web/dist/
+viz/web/*.local

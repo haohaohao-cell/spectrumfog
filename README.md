@@ -31,6 +31,7 @@ spectrumfog run scenarios/01_duel.yaml             # 静态曲线：烧穿 / Pd�
 | `spectrumfog sim <yaml> --gif` | 再加一段俯视动画 `out/<name>.gif` |
 | `spectrumfog animate <jsonl> -o x.gif` | 只读 replay 重出动画（viz 不碰引擎） |
 | `spectrumfog run <yaml>` | 三张静态图 + 链路指标 |
+| `spectrumfog export-web <yaml> -o data.json` | 前端数据包（T2 用，见下） |
 
 ## 当前状态
 
@@ -45,8 +46,22 @@ spectrumfog run scenarios/01_duel.yaml             # 静态曲线：烧穿 / Pd�
 | 固定步长时钟 + 确定性主循环 + seeded RNG | ✅ |
 | replay JSONL：一行一事件、逐字节可复现 | ✅ |
 | 俯视动画（包围圈收缩 / Pd·J/S 时间曲线） | ✅ |
-| 观测（AOA/TOA/功率测量）+ 融合定位 + 虚假目标 | ⬜ T2–T3a |
-| Web 交互（Vite + React + deck.gl） | ⬜ T2 |
+| 观测（AOA/TOA/功率测量）+ 融合定位 + 虚假目标 | ⬜ T3a |
+| Web 交互（拖动干扰机 → 热力图与曲线） | ✅（构建与单测通过；浏览器手测见 [docs/web.md](docs/web.md)） |
+
+## Web 交互（T2）
+
+拖动干扰机，覆盖热力图、跟踪边界和两条曲线实时跟着变；**没有后端**。
+物理仍然只有 Python 这一份：`export-web` 把 Pd/J-S 编译成 (Rt, Rj) 查表，
+网页只做插值和画图。
+
+```bash
+spectrumfog export-web scenarios/02_standoff.yaml -o viz/web/public/data.json
+cd viz/web && npm install && npm run dev      # http://localhost:5173
+npm run build                                 # dist/ 纯静态，可丢 GitHub Pages
+```
+
+数据包格式与"为什么前端不算物理"写在 [docs/web.md](docs/web.md)。
 
 ## 怎么读这份代码
 

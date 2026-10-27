@@ -1,0 +1,280 @@
+:root {
+  --ink: #2b2f36;
+  --muted: #6b7178;
+  --line: #dfe3e8;
+  --jam: #c0392b;
+  --primary: #2f6fbf;
+  --green: #2e8b57;
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  color: var(--ink);
+  background: #f7f8fa;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+.app {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 20px 22px 12px;
+}
+
+header h1 {
+  margin: 0 0 4px;
+  font-size: 20px;
+  font-weight: 650;
+  letter-spacing: 0.2px;
+}
+
+header .sub {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+main {
+  display: grid;
+  grid-template-columns: minmax(320px, 640px) 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.map {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fbfbfd;
+  cursor: grab;
+  touch-action: none;
+}
+
+.map:active {
+  cursor: grabbing;
+}
+
+.map canvas.heat,
+.map svg.overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.range-rings circle {
+  fill: none;
+  stroke: #ffffff;
+  stroke-opacity: 0.55;
+  stroke-dasharray: 2 6;
+  stroke-width: 1;
+}
+
+.ring {
+  fill: none;
+  pointer-events: none;
+}
+
+.ring.detection {
+  stroke: var(--primary);
+  stroke-width: 2;
+  fill: rgba(47, 111, 191, 0.06);
+}
+
+.ring.burn {
+  stroke: var(--jam);
+  stroke-width: 1.1;
+  stroke-dasharray: 3 4;
+}
+
+.link {
+  stroke: #ffffff;
+  stroke-opacity: 0.75;
+  stroke-width: 1;
+}
+
+.radar path {
+  fill: var(--primary);
+  stroke: #fff;
+  stroke-width: 1.2;
+}
+
+.jammer rect {
+  fill: var(--jam);
+  stroke: #fff;
+  stroke-width: 1.2;
+}
+
+.target-dot {
+  fill: var(--green);
+  stroke: #fff;
+  stroke-width: 1.4;
+}
+
+.target-dot.jammed {
+  fill: var(--jam);
+}
+
+svg text {
+  font-size: 11px;
+  fill: var(--ink);
+  paint-order: stroke;
+  stroke: #fff;
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+
+.scale-label {
+  font-size: 11px;
+  fill: var(--muted);
+  stroke: none;
+}
+
+aside {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.badge {
+  align-self: flex-start;
+  padding: 4px 12px;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 650;
+  letter-spacing: 0.6px;
+}
+
+.badge.tracking {
+  background: var(--green);
+}
+
+.badge.jammed {
+  background: var(--jam);
+}
+
+.readout {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 12px;
+  margin: 0;
+  padding: 10px 12px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 12.5px;
+}
+
+.readout dt {
+  color: var(--muted);
+}
+
+.readout dd {
+  margin: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.chart {
+  margin: 0;
+  padding: 8px 10px 4px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.chart figcaption {
+  font-size: 11.5px;
+  color: var(--muted);
+  margin-bottom: 2px;
+}
+
+.chart svg {
+  width: 100%;
+  height: auto;
+}
+
+.plot-bg {
+  fill: #fcfcfd;
+}
+
+.gridline {
+  stroke: #e9ecf0;
+  stroke-width: 1;
+}
+
+.threshold {
+  stroke: #8a8f98;
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
+}
+
+.curve {
+  fill: none;
+  stroke-width: 1.8;
+}
+
+.cursor {
+  stroke: #c8871a;
+  stroke-width: 1;
+}
+
+.cursor-dot {
+  stroke: #fff;
+  stroke-width: 1;
+}
+
+.chart text.tick {
+  font-size: 9.5px;
+  fill: var(--muted);
+  stroke: none;
+}
+
+footer {
+  margin-top: 16px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.fatal,
+.loading {
+  max-width: 720px;
+  margin: 60px auto;
+  padding: 20px 24px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  font-size: 13px;
+}
+
+.fatal pre {
+  overflow-x: auto;
+  background: #f7f8fa;
+  padding: 10px;
+  border-radius: 8px;
+}
+
+.fatal code {
+  display: block;
+  margin-top: 6px;
+  padding: 8px 10px;
+  background: #f7f8fa;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+@media (max-width: 900px) {
+  main {
+    grid-template-columns: 1fr;
+  }
+}

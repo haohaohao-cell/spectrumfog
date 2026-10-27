@@ -464,7 +464,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     export_web.add_argument("scenario", type=Path, help="想定 YAML 路径")
     export_web.add_argument(
-        "--out", type=Path, default=None, help="输出 JSON 路径（默认 out/<name>.web.json）"
+        "-o",
+        "--out",
+        type=Path,
+        default=None,
+        help="输出 JSON 路径（默认 out/<name>.web.json）",
     )
     export_web.add_argument(
         "--out-dir", type=Path, default=Path("out"), help="默认输出目录"

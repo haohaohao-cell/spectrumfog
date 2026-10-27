@@ -79,6 +79,47 @@ spectrumfog export-web scenarios/02_standoff.yaml -o viz/web/public/data.json
 ## 前端约定
 
 * 页面只读 `data.json`，不发请求、不写状态到服务器（GitHub Pages 纯静态）。
-* 拖动干扰机时，每帧最多做 97×97 次查表，不需要 Web Worker；
-  目标 <100 ms，实测在开发机上 <10 ms。
+* 拖动干扰机时，每帧最多做 220×220 次查表（canvas 是低分辨率再放大），
+  不需要 Web Worker；目标 <100 ms，实测在开发机上 <10 ms。
 * 版本不符（`schema !== "spectrumfog.web/1"`）直接显示错误，不要降级渲染。
+
+## 本地跑
+
+```bash
+# 1) 生成数据（改了想定或物理就要重跑这一步）
+spectrumfog export-web scenarios/02_standoff.yaml -o viz/web/public/data.json
+
+# 2) 开发模式
+cd viz/web
+npm install
+npm run dev          # http://localhost:5173
+
+# 3) 生产构建（纯静态，dist/ 直接丢 GitHub Pages）
+npm run build
+npm run preview
+
+# 4) 前端单测（查表逻辑 + 首屏渲染）
+npm test
+```
+
+## 验证状态（诚实记录）
+
+已验证：
+
+* `npm run build` 通过（tsc 类型检查 + vite 打包，JS 230 KB / gzip 73 KB，无 WebGL 依赖）；
+* 15 项前端单测通过：解码、log 遍历、双线性插值、环插值、越界夹取、
+  用真实数据包做首屏 SSR 渲染（TRACKING / JAMMED 两种状态）；
+* 静态产物经 `vite preview` 实测：`index.html`、`data.json`、JS/CSS 均 200。
+
+**未验证**（本机没有浏览器，只能靠你点一下）：
+
+* 拖动的手感与帧率。若明显卡顿，先把 `App.tsx` 里的 `HEAT` 从 220 降到 160；
+* 地图与曲线在高 DPI 屏上的清晰度；
+* 移动端触摸拖动。
+
+## 为什么没用 deck.gl
+
+T2 的验收是"拖动 + 热力图 + 曲线 <100 ms"，二维、几百个图元，canvas 自绘足够。
+deck.gl 会带来 ~1 MB 的 WebGL 依赖和一层 GPU 抽象，在只有一个热力图的页面上不划算。
+等 T3b 要做多平台 / 大规模轨迹时再上 deck.gl，届时的数据包可以复用同一份表。
+
