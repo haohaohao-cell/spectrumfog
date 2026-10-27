@@ -90,7 +90,8 @@ scenarios/
   01_duel.yaml        T0：单雷达 vs 单干扰机（自屏蔽，静态）
   02_standoff.yaml    T1：站距干扰 + 移动干扰机 + 待机目标（动画）
 tests/              97 项：物理、想定、时钟、回放、确定性、动画、CLI
-docs/               physics.md（公式与假设）· scenario.md（YAML schema）· metrics.md（指标定义）
+docs/               physics.md（公式与假设）· design.md（建模取舍）· scenario.md（YAML schema）
+                    metrics.md（指标定义）· web.md（前端数据包）· launch.md（发布文案）
 ```
 
 三条硬约束（[PROJECT.md](PROJECT.md) §2，改之前先想清楚）：
