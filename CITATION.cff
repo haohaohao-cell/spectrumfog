@@ -11,7 +11,7 @@ type: software
 authors:
   - family-names: "郝"
     given-names: "仁昱"
-version: 0.1.0
+version: 0.2.0
 date-released: "2026-10-27"
 license: Apache-2.0
 keywords:

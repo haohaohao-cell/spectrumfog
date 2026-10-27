@@ -351,7 +351,7 @@ star 主要来自发布，不是来自代码量。
 | 交互演示（拖干扰机） | <https://haohaohao-cell.github.io/spectrumfog/> |
 | 文档站（9 页） | <https://haohaohao-cell.github.io/spectrumfog/docs/> |
 | 排行榜 | <https://haohaohao-cell.github.io/spectrumfog/docs/leaderboard.html> |
-| 仓库 / 发布 | <https://github.com/haohaohao-cell/spectrumfog> · v0.1.0 |
+| 仓库 / 发布 | <https://github.com/haohaohao-cell/spectrumfog> · v0.2.0 |
 | 想定集合（排行榜基准） | `scenarios/suite_v1.yaml`（6 想定 × 5 种子 × 3 策略） |
 | 测试 | 182 项 Python + 16 项前端，CI 全绿 |
 | 发布文案 | `docs/launch.md`（五个渠道） |
