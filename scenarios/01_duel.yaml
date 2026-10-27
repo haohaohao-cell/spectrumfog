@@ -44,7 +44,28 @@ platforms:
         pj_w: 90.0
         gain_db: 0
 
-sensors: []
+sensors:
+  # 蓝方三部 ESM：两部侧翼 + 一部后方，用来演示"三站交汇"。
+  # 噪声系数 12 dB、1 MHz 带宽都是虚构值；测向精度由由此推出的 SNR 决定
+  # （见 engine/detect.py：σ_aoa = 2° · √(100/SNR)）。
+  - id: esm_1
+    kind: esm
+    side: blue
+    pos: [0, -25000]
+    noise_figure_db: 12.0
+    bw_hz: 1.0e6
+  - id: esm_2
+    kind: esm
+    side: blue
+    pos: [0, 25000]
+    noise_figure_db: 12.0
+    bw_hz: 1.0e6
+  - id: esm_3
+    kind: esm
+    side: blue
+    pos: [-25000, 0]
+    noise_figure_db: 12.0
+    bw_hz: 1.0e6
 
 objectives:
   - {type: localize, target: jammer_b, cep_m: 500}

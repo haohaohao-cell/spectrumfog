@@ -19,9 +19,11 @@ from typing import Any
 
 import numpy as np
 
+from .. import metrics
 from ..model.platform import Platform
 from ..model.scenario import Scenario
 from ..physics import radar
+from . import detect, fusion
 from .clock import Clock
 
 __all__ = ["Simulation", "SimulationResult"]
@@ -115,6 +117,7 @@ class Simulation:
             "unjammed_detection_range_m": unjammed_range_m,
             "burn_through_self_m": burn_through_self_m,
             "noise_power_w": pn_w,
+            "cep_threshold_m": self._cep_threshold(),
         }
 
         events: list[dict[str, Any]] = [meta]
@@ -218,16 +221,129 @@ class Simulation:
             pd_series.append(pd)
             jammer_ranges.append(range_jammer_m)
 
+            # --- ESM 观测 + 融合（T3a）---
+            if scenario.sensors:
+                observations = self._observe_tick(
+                    t_s=tick.t, positions=positions, rng=rng
+                )
+                for observation in observations:
+                    events.append(observation.to_event())
+                for estimate_event in self._fuse_tick(
+                    t_s=tick.t, observations=observations
+                ):
+                    events.append(estimate_event)
+
         summary = self._summarise(
             detected_series=detected_series,
             pd_series=pd_series,
             jammer_ranges=jammer_ranges,
             dt=scenario.meta.dt,
             unjammed_range_m=unjammed_range_m,
+            n_fixes=sum(1 for event in events if event["kind"] == "estimate"),
         )
         return SimulationResult(meta=meta, events=events, summary=summary)
 
     # --- 内部 -------------------------------------------------------------
+
+    def _observe_tick(
+        self,
+        *,
+        t_s: float,
+        positions: dict[str, tuple[float, float]],
+        rng: np.random.Generator,
+    ) -> list[detect.EsmMeasurement]:
+        """本 tick 所有 ESM 传感器对敌方辐射源的观测（含虚假目标）。"""
+        observations: list[detect.EsmMeasurement] = []
+        for sensor in self.scenario.sensors:
+            if sensor.kind != "esm":
+                continue
+            for platform in self.scenario.platforms:
+                if platform.side == sensor.side:
+                    continue
+                for emitter in platform.emitters:
+                    power = getattr(emitter, "pt_w", None) or getattr(emitter, "pj_w", None)
+                    if power is None:
+                        continue
+                    observations.append(
+                        detect.observe(
+                            sensor_id=sensor.id,
+                            sensor_pos=sensor.pos,
+                            sensor_bw_hz=sensor.bw_hz,
+                            sensor_noise_figure=sensor.noise_figure,
+                            sensor_gain=sensor.gain,
+                            emitter_id=platform.id,
+                            emitter_pos=positions[platform.id],
+                            emitter_power_w=float(power),
+                            emitter_gain=float(emitter.gain),
+                            emitter_freq_hz=float(emitter.freq_hz),
+                            t_s=t_s,
+                            pfa=self.pfa,
+                            rng=rng,
+                        )
+                    )
+            alarm = detect.false_alarm(
+                sensor_id=sensor.id,
+                sensor_pos=sensor.pos,
+                t_s=t_s,
+                pfa_scan=sensor.pfa_scan,
+                rng=rng,
+            )
+            if alarm is not None:
+                observations.append(alarm)
+        return observations
+
+    def _fuse_tick(
+        self, *, t_s: float, observations: list[detect.EsmMeasurement]
+    ) -> list[dict[str, Any]]:
+        """把本 tick 的检出量测按辐射源分组，做加权最小二乘定位。"""
+        grouped: dict[str, list[detect.EsmMeasurement]] = {}
+        for observation in observations:
+            if observation.detected and observation.emitter_id is not None:
+                grouped.setdefault(observation.emitter_id, []).append(observation)
+
+        estimates: list[dict[str, Any]] = []
+        for emitter_id, items in grouped.items():
+            fix = fusion.solve_fix(
+                [
+                    fusion.Measure(
+                        sensor_id=item.sensor_id,
+                        sensor_pos=item.sensor_pos,
+                        aoa_rad=item.aoa_rad,
+                        toa_s=item.toa_s,
+                        sigma_aoa_rad=item.sigma_aoa_rad or fusion.DEFAULT_SIGMA_AOA_RAD,
+                        sigma_toa_s=item.sigma_toa_s or fusion.DEFAULT_SIGMA_TOA_S,
+                    )
+                    for item in items
+                ]
+            )
+            if fix is None:
+                continue
+            cep50, cep90 = metrics.cep_from_covariance(fix.covariance, samples=2000)
+            estimates.append(
+                {
+                    "kind": "estimate",
+                    "t": t_s,
+                    "target": emitter_id,
+                    "pos": [float(fix.pos[0]), float(fix.pos[1])],
+                    "cov": [
+                        [float(fix.covariance[0, 0]), float(fix.covariance[0, 1])],
+                        [float(fix.covariance[1, 0]), float(fix.covariance[1, 1])],
+                    ],
+                    "cep_cov_m": cep50,
+                    "cep90_cov_m": cep90,
+                    "n_measurements": fix.n_measurements,
+                    "sensors": list(fix.sensors),
+                    "geometry_deg": fix.geometry_deg,
+                }
+            )
+        return estimates
+
+    def _cep_threshold(self) -> float:
+        """"被有效定位"的 CEP 门槛 [m]：取想定里第一个 localize 目标，缺省 500 m。"""
+        for objective in self.scenario.objectives:
+            if objective.type == "localize" and objective.cep_m is not None:
+                return float(objective.cep_m)
+        return 500.0
 
     def _target_platform(self, jammer_platform: Platform) -> Platform:
         """目标 = 想定里 ``type: detect`` 的 objective 指向的平台。
@@ -294,6 +410,7 @@ class Simulation:
         jammer_ranges: list[float],
         dt: float,
         unjammed_range_m: float,
+        n_fixes: int = 0,
     ) -> dict[str, Any]:
         """两种口径分开报，别混：
 
@@ -321,6 +438,7 @@ class Simulation:
             "unjammed_detection_range_m": unjammed_range_m,
             "jammer_range_start_m": jammer_ranges[0] if jammer_ranges else None,
             "jammer_range_end_m": jammer_ranges[-1] if jammer_ranges else None,
+            "n_fixes": int(n_fixes),
         }
 
 

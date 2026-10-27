@@ -117,6 +117,34 @@ Eb/N0    = Prx / (N0 · Rb),  N0 = k · T · F                 # comms.ebn0 / co
 AJ_margin_dB = Gp + Mc - required_JS_dB                     # comms.aj_margin_db
 ```
 
+### 3.7 ESM 观测与定位（T3a）
+
+传感器只看**对方阵营**的辐射源。单程 Friis 得到到达功率，噪声底用传感器自己的
+带宽与噪声系数，再用同一个 Swerling I 闭式给单次扫描的检出概率：
+
+```
+Prx   = Ptx · Gtx · Grx · (λ / 4πR)²            # 单程，engine/detect.py
+Pn    = k · T0 · Bs · Fs                        # 传感器带宽 / 噪声系数
+Pd    = Pfa ^ (1/(1 + SNR))                     # 与雷达同一个函数
+σ_aoa = 2° · sqrt(100 / SNR)                    # 夹在 [0.2°, 20°]
+```
+
+检出后生成带噪声的 AOA、TOA（σ = 100 ns ≈ 30 m）、频率、功率；按 `pfa_scan`
+生成无源量测（虚假目标，`emitter = null`）。
+
+定位用加权最小二乘（`engine/fusion.py`），未知量只有 (x, y)，残差两类：
+
+```
+测向：  wrap(aoa_i − atan2(p − s_i)) / σ_aoa
+TDOA：  [ (|p − s_i| − |p − s_ref|)/c − (toa_i − toa_ref) ] / √(σ_toa,i² + σ_toa,ref²)
+```
+
+协方差 = (JᵀWJ)⁻¹，有冗余时用残差估方差因子（chi²/dof）。少于两条测向、
+又不足三个 TOA 时几何上定不了位，直接返回 None——不猜。
+
+AAR 的归因用的就是这套残差函数：留一法重解、单独喂测向 / TDOA，
+所以"原因是 X"这句话是可以被复算的，不是写出来的。
+
 ## 4. 裁决记录
 
 ### 4.1 烧穿距离里的增益指数：G¹，不是 G²

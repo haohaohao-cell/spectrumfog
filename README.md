@@ -37,6 +37,7 @@ spectrumfog run scenarios/01_duel.yaml             # 静态曲线：烧穿 / Pd�
 | `spectrumfog animate <jsonl> -o x.gif` | 只读 replay 重出动画（viz 不碰引擎） |
 | `spectrumfog run <yaml>` | 三张静态图 + 链路指标 |
 | `spectrumfog export-web <yaml> -o data.json` | 前端数据包（T2 用，见下） |
+| `spectrumfog aar <jsonl>` | 复盘报告：时间线 + 暴露时长 + 归因（单页 HTML） |
 
 ## 当前状态
 
@@ -51,7 +52,8 @@ spectrumfog run scenarios/01_duel.yaml             # 静态曲线：烧穿 / Pd�
 | 固定步长时钟 + 确定性主循环 + seeded RNG | ✅ |
 | replay JSONL：一行一事件、逐字节可复现 | ✅ |
 | 俯视动画（包围圈收缩 / Pd·J/S 时间曲线） | ✅ |
-| 观测（AOA/TOA/功率测量）+ 融合定位 + 虚假目标 | ⬜ T3a |
+| 观测（AOA/TOA/功率测量）+ 融合定位 + 虚假目标 | ✅ T3a |
+| AAR 复盘（时间线 · 暴露时长 · 留一法归因 · HTML 报告） | ✅ T3a |
 | Web 交互（拖动干扰机 → 热力图与曲线） | ✅ 线上已部署 |
 
 ## 两个反直觉的结果（免得你以为算错了）
@@ -89,6 +91,27 @@ npm run build                                 # dist/ 纯静态，可丢 GitHub 
 *初始状态：干扰机在 60 km，12 km 处的目标仍被跟踪（Pd 0.92），跟踪边界 20.5 km。
 把红色方块往雷达方向拖，边界和蓝色区域会一起收缩。*
 
+## AAR 复盘（T3a）
+
+`replay.jsonl` 进，单页 HTML 出：关键事件时间线、暴露时长、定位误差归因。
+结论句是自动生成的，每个数字都能由日志行复算：
+
+> 你的 jammer_b 在 t = 4 s 被有效定位（CEP ≈ 74 m，门槛 500 m）。
+> t = 0 s 其实已经首次交汇，但当时只有 2 台传感器参与（交会角 82°）、CEP 611 m 还没进门槛；
+> 真正锁定它的是 esm_1、esm_2、esm_3 的 3 条量测同时交汇；
+> 留一检验里去掉 esm_2 会让误差从 152 m 变成 3318 m；
+> 精度主要由 TDOA 决定（只留测向 CEP 1683 m，只留 TDOA 137 m）。
+
+```bash
+spectrumfog sim scenarios/01_duel.yaml --out out     # 出 replay
+spectrumfog aar out/01_duel.jsonl                    # 出 out/01_duel_aar.html
+```
+
+"原因是 X" 不是形容词：**留一法**逐台去掉传感器重解一次，外加"只留测向 / 只留 TDOA"
+两组对照，都是同一套最小二乘，所以归因结论和定位结论不可能不一致。
+
+![AAR 报告](docs/images/aar_report.png)
+
 ## 怎么读这份代码
 
 ```
@@ -98,14 +121,14 @@ src/spectrumfog/
   model/          scenario.py · platform.py · emitter.py · sensor.py —— pydantic
   engine/         clock.py（固定步长）· sim.py（主循环）
   replay.py       JSONL 读写；帧聚合
-  cli.py          run / sim / animate / export-web
+  cli.py          run / sim / animate / export-web / aar
 viz/static/
   plot.py         matplotlib 静态图
   animate.py      俯视动画（只读 replay，不回写）
 scenarios/
-  01_duel.yaml        T0：单雷达 vs 单干扰机（自屏蔽，静态）
+  01_duel.yaml        T0：单雷达 vs 单干扰机 + 三部 ESM（自屏蔽，静态）
   02_standoff.yaml    T1：站距干扰 + 移动干扰机 + 待机目标（动画）
-tests/              106 项：物理、想定、时钟、回放、确定性、动画、Web 数据包、CLI
+tests/              136 项：物理、想定、时钟、回放、确定性、动画、融合、AAR、Web 数据包、CLI
 viz/web/src/        16 项前端单测（查表解码、插值、首屏渲染）
 docs/               physics.md（公式与假设）· design.md（建模取舍）· scenario.md（YAML schema）
                     metrics.md（指标定义）· web.md（前端数据包）· launch.md（发布文案）

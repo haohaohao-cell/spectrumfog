@@ -16,7 +16,7 @@ import math
 import sys
 from pathlib import Path
 
-from . import __version__
+from . import __version__, aar
 from .engine.sim import Simulation
 from .model.scenario import Scenario, load_scenario
 from .physics import radar
@@ -397,6 +397,57 @@ def _export_web(args: argparse.Namespace) -> int:
     return 0
 
 
+# --- aar：复盘报告 -----------------------------------------------------------
+
+
+def _aar(args: argparse.Namespace) -> int:
+    try:
+        replay = Replay.load(args.replay)
+    except (FileNotFoundError, ValueError) as exc:
+        print(f"[错误] {exc}", file=sys.stderr)
+        return 1
+
+    try:
+        report = aar.analyse(replay, threshold_m=args.cep_threshold)
+    except ValueError as exc:
+        print(f"[错误] 复盘失败：{exc}", file=sys.stderr)
+        return 1
+
+    out_path = args.out or args.replay.with_name(f"{args.replay.stem}_aar.html")
+    try:
+        aar.write_html(out_path, aar.render_html(report, replay))
+    except OSError as exc:
+        print(f"[错误] 写报告失败：{exc}", file=sys.stderr)
+        return 1
+
+    print("SpectrumFog · AAR 复盘（只读 replay，不重算物理）")
+    print(f"  想定 {replay.meta.get('scenario', '?')}   目标 {report.emitter}   "
+          f"{report.n_ticks} 帧   解出位置 {report.n_fixes} 帧")
+    print()
+    print(f"  {report.sentence}")
+    print()
+    print(
+        f"  首次有效定位   "
+        + ("无（未跌破门槛）" if report.first_effective_s is None
+           else f"{report.first_effective_s:.0f} s，CEP {report.first_effective_cep_m:.0f} m")
+    )
+    print(
+        f"  最精确的一次   "
+        + ("—" if report.best_cep_m is None
+           else f"{report.best_cep_m:.0f} m（t = {report.best_cep_s:.0f} s）")
+    )
+    print(f"  暴露时长       {report.t_expose_s:.0f} s（门槛 {report.threshold_m:.0f} m）")
+    if report.timeline:
+        print("  关键事件：")
+        for event in report.timeline[:6]:
+            print(f"    t = {event.t_s:5.0f} s   {event.kind}   {event.detail}")
+    print()
+    print(f"  报告 → {out_path}")
+    print()
+    print(_FOOTNOTE)
+    return 0
+
+
 # --- 参数解析 ----------------------------------------------------------------
 
 
@@ -480,6 +531,20 @@ def build_parser() -> argparse.ArgumentParser:
     export_web.add_argument(
         "--samples", type=int, default=97, help="二维表每轴的采样数（默认 97）"
     )
+
+    aar_parser = subparsers.add_parser(
+        "aar", help="复盘一份 replay，生成时间线 + 归因 + 单页 HTML 报告"
+    )
+    aar_parser.add_argument("replay", type=Path, help="replay JSONL 路径")
+    aar_parser.add_argument(
+        "-o", "--out", type=Path, default=None, help="HTML 输出路径（默认与 replay 同名）"
+    )
+    aar_parser.add_argument(
+        "--cep-threshold",
+        type=float,
+        default=None,
+        help="有效定位的 CEP 门槛 [m]（默认取 replay meta，再缺省 500）",
+    )
     return parser
 
 
@@ -494,6 +559,8 @@ def main(argv: list[str] | None = None) -> int:
         return _animate(args)
     if args.command == "export-web":
         return _export_web(args)
+    if args.command == "aar":
+        return _aar(args)
     parser.error(f"未知子命令：{args.command}")
     return 2
 

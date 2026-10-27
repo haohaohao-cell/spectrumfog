@@ -9,10 +9,18 @@
 
 事件类型
 --------
-``meta``      仿真级常量（一次）
-``state``     某平台在某时刻的位置与辐射源状态（每平台每 tick 一条）
-``link``      一把雷达 / 一台干扰机 / 一个目标的几何与物理量（每 tick 一条）
-``detection`` 该 tick 的检测裁决（含 Pd 与掷点，保证可复算）
+``meta``        仿真级常量（一次）
+``state``       某平台在某时刻的位置与辐射源状态（每平台每 tick 一条）
+``link``        一把雷达 / 一台干扰机 / 一个目标的几何与物理量（每 tick 一条）
+``detection``   雷达对该 tick 的检测裁决（含 Pd 与掷点，保证可复算）
+``measurement`` 一条 ESM 观测：AOA / TOA / 频率 / 功率，或一次漏检（T3a）
+
+    注意：PROJECT.md §7.2 的示例把 ESM 观测也叫 ``detection``，但本仓库里
+    ``detection`` 已被"雷达对目标的检测"占用（T1 动画依赖该形状），
+    而且一个 tick 会有多条 ESM 观测，无法塞进单槽。所以 ESM 观测独立成
+    ``measurement``，语义与 §7.2 的 ``detection`` 一致。
+
+``estimate``    融合定位结果：位置、协方差、参与量测数与几何量（T3a）
 """
 
 from __future__ import annotations
@@ -32,7 +40,7 @@ __all__ = [
     "build_frames",
 ]
 
-EVENT_KINDS = ("meta", "state", "link", "detection")
+EVENT_KINDS = ("meta", "state", "link", "detection", "measurement", "estimate")
 
 
 def write_replay(path: str | Path, events: Sequence[Mapping[str, Any]]) -> int:
@@ -82,13 +90,15 @@ def read_replay(path: str | Path) -> list[dict[str, Any]]:
 
 @dataclass(frozen=True)
 class Frame:
-    """一个 tick 的完整快照，供 viz 逐帧绘制。"""
+    """一个 tick 的完整快照，供 viz / AAR 逐帧使用。"""
 
     t: float
     positions: dict[str, tuple[float, float]]
     emitters: dict[str, str | None]
     link: dict[str, Any] | None
     detection: dict[str, Any] | None
+    measurements: tuple[dict[str, Any], ...] = ()
+    estimates: tuple[dict[str, Any], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -126,7 +136,14 @@ def build_frames(events: Sequence[Mapping[str, Any]]) -> tuple[Frame, ...]:
         t = float(event["t"])
         bucket = buckets.setdefault(
             t,
-            {"positions": {}, "emitters": {}, "link": None, "detection": None},
+            {
+                "positions": {},
+                "emitters": {},
+                "link": None,
+                "detection": None,
+                "measurements": [],
+                "estimates": [],
+            },
         )
         kind = event["kind"]
         if kind == "state":
@@ -140,6 +157,10 @@ def build_frames(events: Sequence[Mapping[str, Any]]) -> tuple[Frame, ...]:
             bucket["link"] = dict(event)
         elif kind == "detection":
             bucket["detection"] = dict(event)
+        elif kind == "measurement":
+            bucket["measurements"].append(dict(event))
+        elif kind == "estimate":
+            bucket["estimates"].append(dict(event))
 
     return tuple(
         Frame(
@@ -148,6 +169,8 @@ def build_frames(events: Sequence[Mapping[str, Any]]) -> tuple[Frame, ...]:
             emitters=buckets[t]["emitters"],
             link=buckets[t]["link"],
             detection=buckets[t]["detection"],
+            measurements=tuple(buckets[t]["measurements"]),
+            estimates=tuple(buckets[t]["estimates"]),
         )
         for t in sorted(buckets)
     )
