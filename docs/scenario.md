@@ -116,6 +116,7 @@ waypoints:
 | `bw_hz` | float > 0 | 必填 | 转发带宽 [Hz] |
 | `gain_db` | float | 必填 | 收发共用天线增益 [dBi] |
 | `amplification_db` | float | 20 | 转发放大倍数 [dB]（含插入损耗的净增益） |
+| `range_offset_m` | float ≥ 0 | 0 | 距离欺骗偏置 [m]：假回波被放到 `R + offset` 处（τ = 2·offset/c） |
 
 等效 RCS：`σ_eq = λ²·G_d²·A·L/(4π)`。它同时也是**代价**：诱饵转发时在辐射，
 所以蓝方 ESM 能看到它——只是功率取决于被照得多亮，而不是诱饵自己设定。

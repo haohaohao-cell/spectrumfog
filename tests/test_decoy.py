@@ -13,6 +13,7 @@ from spectrumfog.physics import radar
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DECOY_YAML = REPO_ROOT / "scenarios" / "06_decoy.yaml"
+DUEL_YAML = REPO_ROOT / "scenarios" / "01_duel.yaml"
 
 
 def _scenario(**overrides) -> dict:
@@ -154,3 +155,60 @@ def test_decoy_scenario_story():
     assert result.summary["decoy_detected_fraction"] > 0.5
     # 真目标 70 km 外、又被弱干扰机压着 —— Pd 远低于诱饵
     assert links[0]["pd"] < decoys[0]["pd"]
+
+# --- 假航迹（T3b+）--------------------------------------------------------
+
+
+def test_range_offset_displaces_the_radar_track():
+    """距离欺骗：雷达航迹落在诱饵本体之外 ~3 km，且沿视线更远。"""
+    result = Simulation(load_scenario(DECOY_YAML)).run()
+    radar_tracks = [
+        event
+        for event in result.events
+        if event["kind"] == "track" and event.get("source") == "radar"
+    ]
+    assert radar_tracks
+
+    decoy_pos = (22000.0, -3000.0)
+    first = radar_tracks[0]["pos"]
+    gap = np.hypot(first[0] - decoy_pos[0], first[1] - decoy_pos[1])
+
+    assert gap == pytest.approx(3000.0, abs=600.0)  # 偏移量
+    assert np.hypot(*first) > np.hypot(*decoy_pos)  # 比诱饵更远
+
+
+def test_phantom_track_is_attributed_to_the_decoy():
+    result = Simulation(load_scenario(DECOY_YAML)).run()
+    summary = result.summary
+
+    assert summary["false_track_fraction"] == pytest.approx(1.0)
+    assert summary["first_false_track_s"] is not None
+    assert summary["false_track_ticks"] > 0
+
+
+def test_scenario_without_decoys_has_no_phantom_tracks():
+    result = Simulation(load_scenario(DUEL_YAML)).run()
+
+    assert not result.summary["false_track_ticks"]
+    assert result.summary["false_track_fraction"] is None
+    assert not [
+        event
+        for event in result.events
+        if event["kind"] == "track" and event.get("phantom")
+    ]
+
+
+def test_aar_reports_the_false_track():
+    from spectrumfog import aar
+    from spectrumfog.replay import Replay, build_frames
+
+    result = Simulation(load_scenario(DECOY_YAML)).run()
+    replay = Replay(
+        meta=result.meta,
+        frames=build_frames([e for e in result.events if e["kind"] != "meta"]),
+    )
+
+    report = aar.analyse(replay, emitter="decoy_r")
+
+    assert "假航迹" in report.sentence
+    assert any(event.kind == "假航迹" for event in report.timeline)

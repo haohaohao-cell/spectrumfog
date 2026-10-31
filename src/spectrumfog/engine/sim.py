@@ -15,7 +15,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+import math
+from typing import Any, Sequence
 
 import numpy as np
 
@@ -139,6 +140,17 @@ class Simulation:
         jammer_ranges: list[float] = []
         comms_states: list[bool] = []
         trackers: dict[str, Tracker] = {}
+        # 雷达的量测精度比 ESM 高一个量级，所以门限也收紧
+        radar_tracker = Tracker(
+            dt=scenario.meta.dt,
+            assoc_radius_m=1500.0,
+            update_radius_m=1500.0,
+            confirm_hits=3,
+            max_coast=4,
+        )
+        radar_track_ticks = 0
+        false_track_ticks = 0
+        first_false_track_s: float | None = None
         decoy_pd_series: list[float] = []
         decoy_detected: list[bool] = []
 
@@ -288,6 +300,38 @@ class Simulation:
                 decoy_pd_series.append(float(decoy_event["pd"]))
                 decoy_detected.append(bool(decoy_event["detected"]))
 
+            # --- 雷达航迹（假航迹的来源）：真目标 + 每个诱饵的视在位置 ---
+            radar_measurements = []
+            if detected:
+                radar_measurements.append(
+                    self._radar_measurement(
+                        radar_pos, target_pos, params["bw_r_hz"]
+                    )
+                )
+            for decoy_event in decoy_events:
+                if not decoy_event["detected"]:
+                    continue
+                radar_measurements.append(
+                    self._radar_measurement(
+                        radar_pos,
+                        (decoy_event["apparent_pos"][0], decoy_event["apparent_pos"][1]),
+                        params["bw_r_hz"],
+                    )
+                )
+            for radar_event in radar_tracker.step(radar_measurements, tick.t):
+                radar_event["source"] = "radar"
+                radar_event["phantom"] = _closer_to_decoy(
+                    radar_event["pos"],
+                    target_pos,
+                    [event["apparent_pos"] for event in decoy_events],
+                )
+                events.append(radar_event)
+                radar_track_ticks += 1
+                if radar_event["phantom"]:
+                    false_track_ticks += 1
+                    if first_false_track_s is None:
+                        first_false_track_s = float(tick.t)
+
             # --- ESM 观测 + 融合（T3a）---
             if scenario.sensors:
                 observations = self._observe_tick(
@@ -327,14 +371,35 @@ class Simulation:
             decoy_pd=decoy_pd_series,
             decoy_detected=decoy_detected,
             track_events=[
-                event for event in events if event["kind"] == "track"
+                event
+                for event in events
+                if event["kind"] == "track" and event.get("source") != "radar"
             ],
+            radar_track_ticks=radar_track_ticks,
+            false_track_ticks=false_track_ticks,
+            first_false_track_s=first_false_track_s,
             localize_target=self._localize_target(),
             n_ticks=int(round(scenario.meta.duration / scenario.meta.dt)) + 1,
         )
         return SimulationResult(meta=meta, events=events, summary=summary)
 
     # --- 内部 -------------------------------------------------------------
+
+    def _radar_measurement(
+        self,
+        radar_pos: tuple[float, float],
+        target_pos: tuple[float, float],
+        bw_hz: float,
+    ) -> tuple[tuple[float, float], Any]:
+        """雷达对某个点的量测协方差：距离分辨率 + 测角精度，投到直角坐标。"""
+        range_m = _distance(radar_pos, target_pos)
+        sigma_r = max(fusion.SPEED_OF_LIGHT_MPS / (2.0 * float(bw_hz)), 1.0) / 2.0
+        sigma_cross = max(range_m * math.radians(0.5), 1.0)  # 0.5° 测角
+        ux = (target_pos[0] - radar_pos[0]) / max(range_m, 1e-9)
+        uy = (target_pos[1] - radar_pos[1]) / max(range_m, 1e-9)
+        radial = np.array([[ux * ux, ux * uy], [uy * ux, uy * uy]]) * sigma_r**2
+        cross = np.array([[uy * uy, -uy * ux], [-ux * uy, ux * ux]]) * sigma_cross**2
+        return (float(target_pos[0]), float(target_pos[1])), radial + cross
 
     def _jammer_for(self, freq_hz: float, bw_hz: float):
         """挑一台与给定频段重叠的干扰机；没有就返回 None。"""
@@ -378,6 +443,15 @@ class Simulation:
 
                 decoy_pos = positions[platform.id]
                 range_m = _distance(radar_pos, decoy_pos)
+                # 距离欺骗：雷达会把回波放到更远处（沿视线方向外推 offset）
+                unit = (
+                    (decoy_pos[0] - radar_pos[0]) / range_m,
+                    (decoy_pos[1] - radar_pos[1]) / range_m,
+                )
+                apparent_pos = (
+                    decoy_pos[0] + unit[0] * emitter.range_offset_m,
+                    decoy_pos[1] + unit[1] * emitter.range_offset_m,
+                )
                 tx_power = float(
                     radar.decoy_transmit_power(
                         pt_w=params["pt_w"],
@@ -420,6 +494,11 @@ class Simulation:
                         "decoy": platform.id,
                         "radar": radar_platform.id,
                         "pos": [float(decoy_pos[0]), float(decoy_pos[1])],
+                        "apparent_pos": [
+                            float(apparent_pos[0]),
+                            float(apparent_pos[1]),
+                        ],
+                        "range_offset_m": float(emitter.range_offset_m),
                         "range_m": range_m,
                         "sigma_eq_m2": sigma_eq,
                         "tx_power_w": tx_power,
@@ -721,6 +800,9 @@ class Simulation:
         track_events: list[dict[str, Any]] | None = None,
         localize_target: str | None = None,
         n_ticks: int | None = None,
+        radar_track_ticks: int = 0,
+        false_track_ticks: int = 0,
+        first_false_track_s: float | None = None,
     ) -> dict[str, Any]:
         """两种口径分开报，别混：
 
@@ -761,7 +843,31 @@ class Simulation:
             ),
             "n_decoy_samples": len(decoy_pd or []),
             **self._track_summary(track_events or [], localize_target, n_ticks),
+            "radar_track_ticks": int(radar_track_ticks),
+            "false_track_ticks": int(false_track_ticks),
+            "false_track_fraction": (
+                float(false_track_ticks) / radar_track_ticks
+                if radar_track_ticks
+                else None
+            ),
+            "first_false_track_s": first_false_track_s,
         }
+
+
+def _closer_to_decoy(
+    pos: Sequence[float],
+    target_pos: Sequence[float],
+    decoy_positions: Sequence[Sequence[float]],
+) -> bool:
+    """这条雷达航迹离诱饵比离真目标更近吗？（事后归因用，不参与滤波）"""
+    if not decoy_positions:
+        return False
+    to_target = float(np.hypot(pos[0] - target_pos[0], pos[1] - target_pos[1]))
+    to_decoy = min(
+        float(np.hypot(pos[0] - decoy[0], pos[1] - decoy[1]))
+        for decoy in decoy_positions
+    )
+    return to_decoy < to_target
 
 
 def _distance(a: tuple[float, float], b: tuple[float, float]) -> float:

@@ -115,8 +115,18 @@ def test_sim_writes_replay_and_reports(short_scenario, tmp_path, capsys):
 
     replay_path = tmp_path / "short_standoff.jsonl"
     assert replay_path.exists()
+    import json
+
     lines = replay_path.read_text(encoding="utf-8").splitlines()
-    assert len(lines) == 1 + 6 * (3 + 1 + 1)  # meta + 6 帧 × (3 平台 + link + detection)
+    events = [json.loads(line) for line in lines]  # 一行一个自包含事件
+    assert events[0]["kind"] == "meta"
+    kinds = [event["kind"] for event in events]
+    # 6 帧 × 3 平台 = 18 条 state；每帧一条 link + 一条 detection。
+    # 航迹事件取决于关联是否成功，不写死条数（T3b+ 之后每帧可能多一条）。
+    assert kinds.count("state") == 18
+    assert kinds.count("link") == 6
+    assert kinds.count("detection") == 6
+    assert all("kind" in event and "t" in event or event["kind"] == "meta" for event in events)
 
     out = capsys.readouterr().out
     assert "short_standoff" in out

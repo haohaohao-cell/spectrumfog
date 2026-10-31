@@ -342,6 +342,12 @@ objectives:              # 可空；target 必须指向存在的平台
 <td>20</td>
 <td>转发放大倍数 [dB]（含插入损耗的净增益）</td>
 </tr>
+<tr>
+<td><code>range_offset_m</code></td>
+<td>float ≥ 0</td>
+<td>0</td>
+<td>距离欺骗偏置 [m]：假回波被放到 <code>R + offset</code> 处（τ = 2·offset/c）</td>
+</tr>
 </tbody>
 </table>
 <p>等效 RCS：<code>σ_eq = λ²·G_d²·A·L/(4π)</code>。它同时也是<strong>代价</strong>：诱饵转发时在辐射，

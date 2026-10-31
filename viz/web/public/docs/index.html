@@ -273,6 +273,8 @@ spectrumfog aar out/01_duel.jsonl                    # 出 out/01_duel_aar.html
 两组对照，都是同一套最小二乘，所以归因结论和定位结论不可能不一致。</p>
 <p><img alt="AAR 报告" src="images/aar_report.png"></p>
 <p>报告现在还会给出<strong>航迹</strong>：蓝方在 t=3 s 起批、t=99 s 丢失、确认覆盖 85%。
+在 <code>06_decoy</code> 里还会多一句——蓝方雷达起批了一条<strong>假航迹</strong>：诱饵用 3 km 的距离欺骗，
+让雷达在 25 km 处锁住一个不在那里的目标。
 这是和"单帧解出位置"不同的问题——航迹要连续命中 3 次才算确认，
 确认后还能滑行 5 帧，所以"漏一帧"和"跟丢了"终于是两件事。</p>
 <h2 id="baseline-t3b">Baseline 评测（T3b）</h2>

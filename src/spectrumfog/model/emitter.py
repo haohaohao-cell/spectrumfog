@@ -160,6 +160,14 @@ class DecoyEmitter(_EmitterBase):
         default=20.0,
         description="转发放大倍数 [dB]（含插入损耗的净增益）",
     )
+    range_offset_m: float = Field(
+        default=0.0,
+        ge=0.0,
+        description=(
+            "距离欺骗（RGPO）偏置 [m]：转发时延迟 τ，雷达会把回波放到 "
+            "R + c·τ/2 处。0 = 只做亮度欺骗，>0 = 让雷达量到一个假距离"
+        ),
+    )
 
     @field_validator("gain", mode="before")
     @classmethod

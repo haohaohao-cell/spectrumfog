@@ -238,6 +238,16 @@ score:
 <td>同一辐射源的航迹条数</td>
 <td>抖动与重起</td>
 </tr>
+<tr>
+<td><code>false_track_fraction</code></td>
+<td>雷达航迹落在<strong>诱饵视在位置</strong>（而不是真目标）的帧占比</td>
+<td>欺骗是否奏效</td>
+</tr>
+<tr>
+<td><code>first_false_track_s</code></td>
+<td>雷达第一次起批假航迹的时刻</td>
+<td>欺骗的反应速度</td>
+</tr>
 </tbody>
 </table>
 <p>关键区别：<strong>航迹确认不要求 CEP ≤ 门槛</strong>。确认条件只是"累计 3 次命中"，
@@ -248,6 +258,12 @@ score:
 </ul>
 <p>另外，确认后的航迹可以<strong>滑行</strong>（只预测不更新）最多 5 帧再判丢失，
 所以"丢一帧"不等于"丢航迹"——这正是单帧 <code>detected=False</code> 做不到的事。</p>
+<h3 id="_2">假航迹怎么算出来的</h3>
+<p>雷达也有自己的航迹层（和 ESM 同一套 <code>Tracker</code>，只是门限更紧：关联/更新半径 1.5 km）。
+每帧喂给它两类量测：真目标（若 <code>detected</code>）与每个诱饵的<strong>视在位置</strong>（若该诱饵被照到）。</p>
+<p>航迹本身不知道哪个是真的——这正是欺骗的定义。事后归因时，
+把每条雷达航迹的位置与"真目标 / 诱饵视在位置"比距离，谁近就标成谁。
+<code>false_track_fraction = 1.0</code> 意味着蓝方雷达<strong>只</strong>锁着假目标。</p>
   </main>
 </div>
 <footer>参数全部虚构 · 仅用于教学 / 研究仿真 · Apache-2.0 + CC BY 4.0</footer>

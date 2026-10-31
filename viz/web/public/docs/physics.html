@@ -288,6 +288,11 @@ TDOA：  [ (|p − s_i| − |p − s_ref|)/c − (toa_i − toa_ref) ] / √(σ_
 </code></pre>
 <p><code>σ_eq</code> 的定义就是"同距离上给出同样回波功率的目标 RCS"，所以诱饵可以直接和真实目标
 放在一张表里比较（06_decoy 里诱饵 σ_eq 6.3 m²，回波是 70 km 外真目标的 325 倍）。</p>
+<p><strong>距离欺骗（RGPO）</strong>：转发时延迟 τ，雷达量到的距离是 <code>R + c·τ/2</code>。
+想定里写 <code>range_offset_m</code>（等价于延迟 <code>2·offset/c</code>），引擎就把假回波的视在位置
+沿雷达视线外推这么多米；回波功率仍按<strong>真实距离</strong>算（诱饵物理上还在原位）。</p>
+<p><code>06_decoy</code> 里 offset = 3 km：诱饵本体在 22 km，雷达航迹却起批在 25 km——蓝方锁着的
+那个目标根本不存在于那里。</p>
 <p>诱饵对 ESM 的可见性由<strong>转发功率</strong>决定：<code>P_tx = 照射功率 × A</code>。
 所以它只在该帧辐射、功率随距离变化——这条写进了 <code>radar.decoy_transmit_power</code>。</p>
 <p>注意：诱饵不能对抗噪声压制。03_triad 里 90 W 的同频干扰机把雷达整个压住时，

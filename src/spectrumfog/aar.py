@@ -155,8 +155,17 @@ def analyse(
         event
         for frame in replay.frames
         for event in frame.tracks
-        if event.get("emitter") == target
+        if event.get("emitter") == target and event.get("source") != "radar"
     ]
+    phantom_tracks = [
+        event
+        for frame in replay.frames
+        for event in frame.tracks
+        if event.get("source") == "radar" and event.get("phantom")
+    ]
+    first_phantom = (
+        min(float(event["t"]) for event in phantom_tracks) if phantom_tracks else None
+    )
     confirmed_times = sorted(
         {float(event["t"]) for event in track_events if event["status"] == "confirmed"}
     )
@@ -166,6 +175,15 @@ def analyse(
     track_first = confirmed_times[0] if confirmed_times else None
     track_lost = lost_times[0] if lost_times else None
     track_fraction = len(confirmed_times) / max(1, n_ticks)
+    if first_phantom is not None:
+        events.append(
+            KeyEvent(
+                first_phantom,
+                "假航迹",
+                "蓝方雷达起批的目标不在真实位置上（诱饵的距离欺骗）",
+            )
+        )
+
     if track_first is not None:
         events.append(
             KeyEvent(
@@ -211,6 +229,12 @@ def analyse(
         truth=truth,
         fix_rate=fix_rate,
     )
+
+    if first_phantom is not None:
+        sentence = sentence + (
+            f" 同时，蓝方雷达在 t={first_phantom:.0f} s 起批了一条假航迹："
+            "它跟踪的那个目标不在真实位置上——这是诱饵的距离欺骗，不是噪声。"
+        )
 
     if track_first is not None:
         tail = (
