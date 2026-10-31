@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>这个模型证明了什么 · SpectrumFog</title>
+<style>
+:root {
+  --ink: #2b2f36; --muted: #6b7178; --line: #e3e6ea; --bg: #f7f8fa;
+  --accent: #2f6fbf; --code-bg: #f2f4f7;
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); line-height: 1.7; }
+.layout { display: grid; grid-template-columns: 230px minmax(0, 880px); gap: 36px;
+          max-width: 1200px; margin: 0 auto; padding: 28px 24px 64px; }
+.side { position: sticky; top: 24px; align-self: start; font-size: 13.5px; }
+.side .brand { font-weight: 700; font-size: 15px; margin-bottom: 2px; }
+.side .sub { color: var(--muted); font-size: 12px; margin-bottom: 18px; }
+.side a { display: block; color: var(--ink); text-decoration: none; padding: 3px 0; }
+.side a:hover { color: var(--accent); }
+.side a.active { color: var(--accent); font-weight: 600; }
+.side .tag { color: var(--muted); font-size: 11.5px; padding-left: 0; }
+.side hr { border: 0; border-top: 1px solid var(--line); margin: 14px 0; }
+.side .back { color: var(--muted); font-size: 12.5px; }
+main { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 28px 34px 40px; }
+main > h1:first-child { margin-top: 0; }
+h1 { font-size: 26px; } h2 { font-size: 20px; margin-top: 34px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+h3 { font-size: 16.5px; margin-top: 26px; }
+a { color: var(--accent); }
+code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; font-size: 0.92em;
+       font-family: "Cascadia Mono", "Consolas", monospace; }
+pre { background: #f6f8fa; border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px;
+      overflow-x: auto; }
+pre code { background: none; padding: 0; font-size: 12.5px; line-height: 1.55; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; margin: 14px 0; }
+th, td { border: 1px solid var(--line); padding: 6px 9px; text-align: left; vertical-align: top; }
+th { background: #f6f8fa; }
+blockquote { margin: 14px 0; padding: 6px 16px; border-left: 3px solid var(--accent);
+             color: var(--muted); background: #f8fafc; }
+img { max-width: 100%; border-radius: 8px; border: 1px solid var(--line); }
+hr { border: 0; border-top: 1px solid var(--line); margin: 26px 0; }
+footer { max-width: 1200px; margin: 0 auto; padding: 0 24px 40px; color: var(--muted); font-size: 12px; }
+@media (max-width: 820px) {
+  .layout { grid-template-columns: 1fr; }
+  .side { position: static; }
+  main { padding: 20px; }
+}
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="side">
+    <div class="brand">SpectrumFog</div>
+    <div class="sub">频谱迷雾 · 文档</div>
+    <a class="nav" href="index.html">概览</a><span class="tag">从零到跑起来</span>
+    <a class="nav active" href="findings.html">结论</a><span class="tag">这个模型证明了什么</span>
+    <a class="nav" href="physics.html">物理</a><span class="tag">公式、假设、缺口</span>
+    <a class="nav" href="design.html">设计取舍</a><span class="tag">为什么这么做</span>
+    <a class="nav" href="scenario.html">想定格式</a><span class="tag">YAML schema</span>
+    <a class="nav" href="metrics.html">指标</a><span class="tag">Pd / CEP / 暴露</span>
+    <a class="nav" href="bench.html">评测</a><span class="tag">Gym 环境与 baseline</span>
+    <a class="nav" href="leaderboard.html">排行榜</a><span class="tag">同一把尺子下的提交</span>
+    <a class="nav" href="web.html">网页数据包</a><span class="tag">前端不算物理</span>
+    <a class="nav" href="roadmap.html">路线图</a><span class="tag">里程碑与验收</span>
+    <hr>
+    <a class="back" href="../index.html">← 打开交互演示</a>
+    <a class="back" href="https://github.com/haohaohao-cell/spectrumfog">GitHub 仓库</a>
+  </aside>
+  <main>
+<h1 id="_1">这个模型证明了什么</h1>
+<p>一份<strong>部分可观测的电磁对抗仿真</strong>，参数全部虚构。它不预测任何真实系统，
+但它能把几件在纸面上容易想当然的事，变成可以复算的数字。</p>
+<p>下面每一条都附了命令——你可以自己跑出同样的结果，而不是信这份文档。</p>
+<hr>
+<h2 id="_2">一、烧穿 ≠ 能检测</h2>
+<p>教科书常说"J/S = 1 是烧穿点"。<code>01_duel</code> 里（150 kW / 35 dBi 雷达，90 W 干扰机在 30 km，
+1 m² 目标）：</p>
+<table>
+<thead>
+<tr>
+<th>量</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>J/S = 1 的烧穿半径</td>
+<td>3.24 km</td>
+</tr>
+<tr>
+<td>干扰下 Pd = 0.5 的距离</td>
+<td><strong>0.75 km</strong></td>
+</tr>
+<tr>
+<td>30 km 处的 J/S</td>
+<td>85.6（19.3 dB）</td>
+</tr>
+<tr>
+<td>30 km 处的 Pd</td>
+<td>1.2 × 10⁻⁶</td>
+</tr>
+</tbody>
+</table>
+<p>差 4 倍多。原因不复杂：J/S = 1 只把信噪比砍掉 3 dB，而这个 Swerling I 闭式要
+Pd = 0.5 大约需要 20 dB。<strong>"目标在烧穿圈内"和"雷达看得见它"是两件事</strong>，
+中间隔着一个检测概率。</p>
+<pre><code class="language-bash">spectrumfog run scenarios/01_duel.yaml     # 三张图里能直接看到这个差距
+</code></pre>
+<h2 id="1-w-150-kw">二、1 W 干扰机压住 150 kW 雷达——但那是因为模型里没有处理增益</h2>
+<p><code>02_standoff</code> 里只有 1 W，干扰机从 60 km 压到 4 km，雷达的跟踪边界从 20.5 km
+缩到 5.3 km，12 km 处的目标在 t = 170 s 丢失。</p>
+<p>看着不合理，其实合理：100 MHz 上摊开的 1 W 落进 2 MHz 接收机只剩 20 mW，
+而 12 km 处的回波本身只有 −67 dBm。<strong>这是"没有处理增益"这个前提的产物，不是战果。</strong></p>
+<p>所以 0.3.0 加了 <code>processing_gain_db</code>，默认 0（既有数字一个不动），用 <code>07_gain</code> 做对照：</p>
+<table>
+<thead>
+<tr>
+<th>处理增益</th>
+<th>J/S @ 30 km</th>
+<th>Pd</th>
+<th>601 帧命中</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0（<code>01_duel</code>）</td>
+<td>85.6</td>
+<td>1.2e-6</td>
+<td>0</td>
+</tr>
+<tr>
+<td>20 dB</td>
+<td>0.856</td>
+<td>1.7e-3</td>
+<td><strong>2</strong></td>
+</tr>
+<tr>
+<td>40 dB（<code>07_gain</code>）</td>
+<td>0.0086</td>
+<td>0.849</td>
+<td><strong>505</strong></td>
+</tr>
+</tbody>
+</table>
+<p>中间那行是这条的价值所在：<strong>20 dB（功率 ×100、烧穿距离 ×10）几乎什么都没改变</strong>。
+"加个 20 dB 就翻盘"是错觉，真实门槛在 40 dB 附近。</p>
+<pre><code class="language-bash">spectrumfog sim scenarios/07_gain.yaml --replay out/gain.jsonl
+</code></pre>
+<h2 id="_3">三、"被发现一次"和"被跟踪"不是一回事</h2>
+<p>单帧定位点只是量测。加一层航迹（卡尔曼 + 门限 + 关联 + 起批/确认/滑行）之后，
+"漏一帧"和"跟丢了"才成为两个概念。</p>
+<p><code>08_duel_2p</code> 把蓝方雷达也变成决策者（关机 / 半功率 / 满功率），只在蓝方开机时结算，
+两边都在挑时间。暴露的判定方式决定了这个博弈有没有意义：</p>
+<table>
+<thead>
+<tr>
+<th>暴露定义</th>
+<th>蓝方最好成绩</th>
+<th>结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>被定位一次</td>
+<td>约 −4</td>
+<td>150 kW 雷达永远被看见 → 博弈退化成"谁都不开灯"</td>
+</tr>
+<tr>
+<td>被<strong>确认跟踪</strong>（3 次命中）</td>
+<td><strong>+58.8</strong></td>
+<td>脉冲式开机成为甜点：看得见目标，凑不够 3 次命中</td>
+</tr>
+</tbody>
+</table>
+<p>同一个环境，只换暴露的定义，最优策略从"别开机"变成"每 5 帧开 1 帧"。
+<strong>指标定义不是中立的</strong>——它决定了好策略长什么样。</p>
+<table>
+<thead>
+<tr>
+<th>红方</th>
+<th>蓝方</th>
+<th>红方得分</th>
+<th>蓝方得分</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>一直满功率压制</td>
+<td>一直开机</td>
+<td>−4.0</td>
+<td><strong>−304.0</strong></td>
+</tr>
+<tr>
+<td>一直满功率压制</td>
+<td>每 5 帧开 1 帧</td>
+<td><strong>−244.0</strong></td>
+<td>−1.2</td>
+</tr>
+<tr>
+<td>关机</td>
+<td>每 5 帧开 1 帧</td>
+<td>0.0</td>
+<td><strong>+58.8</strong></td>
+</tr>
+</tbody>
+</table>
+<h2 id="_4">四、"雷达看到的"可以是假的</h2>
+<p>转发式诱饵被照到后延迟 τ 再放大转发，雷达量到的距离是 <code>R + c·τ/2</code>。
+<code>06_decoy</code> 里诱饵本体在 22 km，<code>range_offset_m = 3000</code>：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>诱饵本体</td>
+<td>22.0 km</td>
+</tr>
+<tr>
+<td>蓝方雷达航迹起批位置</td>
+<td><strong>25.0 km</strong></td>
+</tr>
+<tr>
+<td>诱饵回波 / 真目标回波</td>
+<td><strong>325×</strong></td>
+</tr>
+<tr>
+<td>蓝方雷达航迹中假航迹占比</td>
+<td><strong>100%</strong></td>
+</tr>
+</tbody>
+</table>
+<p>蓝方雷达全程锁着一条不在那里的航迹。而它的代价在观测侧：诱饵转发时也在辐射，
+所以它自己会被 ESM 解出来——只是精度差到（最好 13 km）连航迹都起不来。</p>
+<blockquote>
+<p>诱饵骗得了雷达，骗不了 ESM 的航迹。<strong>欺骗是对某一部传感器成立，不是对"对方"成立。</strong></p>
+</blockquote>
+<h2 id="_5">五、一个负结果：自训练学不出"脉冲"</h2>
+<p>线性 softmax + CEM，红蓝交替，纯 numpy（<code>bench/selfplay.py</code>）。5 代之后：</p>
+<pre><code>代        红方        蓝方     蓝方开机
+  0    -122.9    -218.2      75%
+  5      46.9     -81.1     100%
+</code></pre>
+<p>两边都在变强，但蓝方学会的是"把功率降到半档"，<strong>不是"脉冲式开机"</strong>。
+加 sin/cos 时间基函数（让它能表达周期性）也没用。三个原因写在
+<a href="bench.html#自训练红蓝交替">评测文档</a>里：无记忆策略、每代样本太少、逐帧奖励没有价值函数——
+脉冲的收益是"省下未来的暴露"，单步贪心看不见。</p>
+<p>这条和前面四条一样重要：它说明了<strong>这个环境能训，但"学出策略"不是加个优化器就行的</strong>。</p>
+<h2 id="_6">六、为什么这些数字可信</h2>
+<p>不是"看起来合理"，是三条机制：</p>
+<ol>
+<li><strong>确定性 replay</strong>：<code>t = index·dt</code>（不累加）、单一 seeded RNG、一行一事件。
+   同一想定 + 同一 seed 逐字节一致，有测试守着。没有这条，任何复盘都是编故事。</li>
+<li><strong>一份物理</strong>：CLI、网页、Gym 环境调的是同一批函数。网页是 Python 预编译的查表 + 插值，
+   所以网页和命令行的数不可能对不上。</li>
+<li><strong>可校验的提交物</strong>：排行榜的提交带每份想定的<strong>内容指纹</strong>（解析后的规范化 JSON，不是文件字节），
+   改一个参数就会被 <code>--verify</code> 挡下来，改注释不会。</li>
+</ol>
+<h2 id="_7">七、这些结论不适用什么</h2>
+<ul>
+<li>参数全是虚构的，<strong>不代表任何真实装备</strong>；</li>
+<li>没有实测校验，只有"公式自洽 + 单元测试"；</li>
+<li>单站、矩形谱、无多径、无极化；诱饵只到"假回波"，不是"假航迹"；</li>
+<li>自训练不是强化学习的最优实践（无记忆、无价值函数）；</li>
+<li>所有"最优策略"都是在<strong>极小的基线集合</strong>上说的，不是博弈论意义上的均衡。</li>
+</ul>
+<p>完整缺口清单在 <a href="physics.html#7-假设与已知缺口">物理文档 §7</a>。</p>
+<h2 id="_8">八、自己复现</h2>
+<pre><code class="language-bash">git clone https://github.com/haohaohao-cell/spectrumfog &amp;&amp; cd spectrumfog
+python -m venv .venv &amp;&amp; . .venv/bin/activate      # Windows: .venv\Scripts\activate
+pip install -e &quot;.[dev,bench]&quot;
+
+pytest -q                                          # 230 项，CI 里含覆盖率 91.7%
+spectrumfog run scenarios/01_duel.yaml             # 第一、二条
+spectrumfog sim scenarios/07_gain.yaml --gif       # 处理增益对照
+spectrumfog bench --suite scenarios/suite_v1.yaml  # 排行榜基准
+</code></pre>
+  </main>
+</div>
+<footer>参数全部虚构 · 仅用于教学 / 研究仿真 · Apache-2.0 + CC BY 4.0</footer>
+</body>
+</html>

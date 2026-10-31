@@ -54,6 +54,7 @@ footer { max-width: 1200px; margin: 0 auto; padding: 0 24px 40px; color: var(--m
     <div class="brand">SpectrumFog</div>
     <div class="sub">频谱迷雾 · 文档</div>
     <a class="nav active" href="index.html">概览</a><span class="tag">从零到跑起来</span>
+    <a class="nav" href="findings.html">结论</a><span class="tag">这个模型证明了什么</span>
     <a class="nav" href="physics.html">物理</a><span class="tag">公式、假设、缺口</span>
     <a class="nav" href="design.html">设计取舍</a><span class="tag">为什么这么做</span>
     <a class="nav" href="scenario.html">想定格式</a><span class="tag">YAML schema</span>
@@ -194,6 +195,10 @@ spectrumfog run scenarios/01_duel.yaml             # 静态曲线：烧穿 / Pd�
 <tr>
 <td>文档站 + 提交物校验 + 排行榜</td>
 <td>✅ T3b</td>
+</tr>
+<tr>
+<td>ruff / mypy / 覆盖率（CI 门槛 90%）</td>
+<td>✅ 工程化</td>
 </tr>
 <tr>
 <td>航迹层 · 假航迹 · 双人对局 · 自训练 · IMM/JPDA</td>
@@ -359,6 +364,10 @@ docs/               physics.md（公式与假设）· design.md（建模取舍�
 </tr>
 </thead>
 <tbody>
+<tr>
+<td><strong>这个模型证明了什么</strong>（五个结论 + 一个负结果）</td>
+<td><a href="https://haohaohao-cell.github.io/spectrumfog/docs/findings.html">文档站「结论」页</a> · <a href="findings.html">docs/what-it-shows.md</a></td>
+</tr>
 <tr>
 <td>公式、单位、假设、<strong>已知缺口</strong></td>
 <td><a href="physics.html">docs/physics.md</a></td>

@@ -43,6 +43,7 @@ class Page:
 
 PAGES: tuple[Page, ...] = (
     Page("README.md", "index.html", "概览", "从零到跑起来"),
+    Page("docs/what-it-shows.md", "findings.html", "结论", "这个模型证明了什么"),
     Page("docs/physics.md", "physics.html", "物理", "公式、假设、缺口"),
     Page("docs/design.md", "design.html", "设计取舍", "为什么这么做"),
     Page("docs/scenario.md", "scenario.html", "想定格式", "YAML schema"),

@@ -61,6 +61,7 @@ spectrumfog run scenarios/01_duel.yaml             # 静态曲线：烧穿 / Pd�
 | Web 交互（拖动干扰机 → 热力图与曲线） | ✅ 线上已部署 |
 | Gymnasium 环境 + 3 个 baseline + 6 个想定 | ✅ T3b |
 | 文档站 + 提交物校验 + 排行榜 | ✅ T3b |
+| ruff / mypy / 覆盖率（CI 门槛 90%） | ✅ 工程化 |
 | 航迹层 · 假航迹 · 双人对局 · 自训练 · IMM/JPDA | ✅ T3b+ |
 
 ## 三个反直觉的结果（免得你以为算错了）
@@ -224,6 +225,7 @@ docs/               physics.md（公式与假设）· design.md（建模取舍�
 
 | 想知道什么 | 看哪 |
 |---|---|
+| **这个模型证明了什么**（五个结论 + 一个负结果） | [文档站「结论」页](https://haohaohao-cell.github.io/spectrumfog/docs/findings.html) · [docs/what-it-shows.md](docs/what-it-shows.md) |
 | 公式、单位、假设、**已知缺口** | [docs/physics.md](docs/physics.md) |
 | **为什么这么设计**（取舍、被否决的方案） | [docs/design.md](docs/design.md) |
 | 想定 YAML 怎么写 | [docs/scenario.md](docs/scenario.md) |
