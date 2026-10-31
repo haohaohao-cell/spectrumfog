@@ -1,0 +1,77 @@
+# 07_gain — 处理增益的 A/B（T3b 之后的第一块）
+#
+# 和 01_duel 完全同一组参数、同一个几何，只改了雷达的一个字段：
+#   processing_gain_db: 40   （01_duel 是默认的 0，即关闭）
+#
+# 这 40 dB 代表脉冲压缩 + 相干积累：信号相干积累、宽带噪声干扰只非相干相加，
+# 所以等效于把干扰机功率除以 10^(40/10) = 10000。
+#
+#   实测（同一组参数，600 s 内 601 帧）：
+#
+#     Gp     J/S@30km   Pd       自屏蔽 R_bt   601 帧命中
+#     0      85.63      1.17e-6   3.24 km       0
+#     20 dB   0.856     1.68e-3  32.42 km       2
+#     40 dB   0.0086    0.849   324.19 km     505
+#
+# 顺带回答一个常见误解：20 dB 处理增益（功率 ×100、自屏蔽烧穿距离 ×10）**不够**——
+# 601 帧只命中 2 帧。要让 90 W 的宽带噪声干扰机压不住 150 kW 雷达，
+# 大约需要 40 dB。这不是"加个 20 dB 就翻盘"的事。
+#
+# 全部参数虚构。
+
+meta:
+  name: 07_gain
+  seed: 42
+  dt: 1.0
+  duration: 600
+
+environment:
+  noise_figure_db: 3.0
+  temperature_k: 290
+
+platforms:
+  - id: radar_a
+    side: blue
+    pos: [0, 0]
+    emitters:
+      - kind: radar
+        freq_hz: 3.0e9
+        bw_hz: 2.0e6
+        pt_w: 1.5e5
+        gain_db: 35
+        sigma_m2: 1.0
+        loss_db: 3
+        processing_gain_db: 40   # ← 唯一与 01_duel 不同的一行
+
+  - id: jammer_b
+    side: red
+    pos: [30000, 0]
+    emitters:
+      - kind: noise_jammer
+        freq_hz: 3.0e9
+        bw_hz: 1.0e8
+        pj_w: 90.0
+        gain_db: 0
+
+sensors:
+  - id: esm_1
+    kind: esm
+    side: blue
+    pos: [0, -25000]
+    noise_figure_db: 12.0
+    bw_hz: 1.0e6
+  - id: esm_2
+    kind: esm
+    side: blue
+    pos: [0, 25000]
+    noise_figure_db: 12.0
+    bw_hz: 1.0e6
+  - id: esm_3
+    kind: esm
+    side: blue
+    pos: [-25000, 0]
+    noise_figure_db: 12.0
+    bw_hz: 1.0e6
+
+objectives:
+  - {type: localize, target: jammer_b, cep_m: 500}

@@ -199,7 +199,8 @@ class SpectrumFogEnv(gym.Env):
                 loss=self.params["loss"],
             )
         )
-        pj_w = self.params["pj_w"] * self._power
+        # 处理增益（默认 0 dB = 1.0）：等效于把干扰机功率除以 Gp
+        pj_w = self.params["pj_w"] * self._power / float(self.radar_emitter.processing_gain)
         # 关机、或这台干扰机根本不在雷达频段内 → 无干扰
         if pj_w <= 0.0 or not self.radar_band_ok:
             return float(radar.pd_from_powers(self.pfa, pr_w, pn_w)), 0.0

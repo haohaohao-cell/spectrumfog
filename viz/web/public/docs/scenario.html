@@ -298,6 +298,12 @@ objectives:              # 可空；target 必须指向存在的平台
 <td>0</td>
 <td>系统损耗 [dB]</td>
 </tr>
+<tr>
+<td><code>processing_gain_db</code></td>
+<td>float ≥ 0</td>
+<td>0</td>
+<td>脉冲压缩 / 相干积累的处理增益 [dB]；0 = 关闭。开启后等效于干扰机功率除以 10^(Gp/10)，见 physics.md §3.9</td>
+</tr>
 </tbody>
 </table>
 <h3 id="emitters-kind-decoyt3b">emitters[] — <code>kind: decoy</code>（T3b）</h3>

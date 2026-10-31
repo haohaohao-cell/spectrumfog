@@ -108,14 +108,22 @@ def test_repository_suite_is_v1(scenario_path):
     assert suite.episodes == len(suite.seeds)
 
 
-def test_suite_hashes_are_sha256_of_file_bytes(tmp_path, scenario_path):
-    import hashlib
-
+def test_suite_hashes_follow_the_content_not_the_bytes(tmp_path, scenario_path):
     suite = load_suite(_write_suite(tmp_path, scenario_path))
-    hashes = suite.scenario_hashes()
+    before = suite.scenario_hashes()
 
-    digest = hashlib.sha256(scenario_path.read_bytes()).hexdigest()
-    assert hashes[str(scenario_path)] == f"sha256:{digest}"
+    # 只改注释 / 空行：内容不变 → 指纹不变
+    scenario_path.write_text(
+        "# a comment\n\n" + scenario_path.read_text(encoding="utf-8") + "\n",
+        encoding="utf-8",
+    )
+    assert suite.scenario_hashes() == before
+
+    # 改一个物理参数：指纹必须变
+    payload = yaml.safe_load(scenario_path.read_text(encoding="utf-8"))
+    payload["platforms"][0]["emitters"][0]["pt_w"] = 2.0e5
+    scenario_path.write_text(yaml.safe_dump(payload, allow_unicode=True), encoding="utf-8")
+    assert suite.scenario_hashes() != before
 
 
 def test_suite_rejects_missing_fields(tmp_path, scenario_path):
@@ -139,10 +147,10 @@ def test_submission_roundtrip_and_verify(tmp_path, scenario_path):
     assert payload["score"] == pytest.approx(rows[0].reward_mean)
     assert verify_submission(payload, suite) == []
 
-    # 现场改想定 → 哈希对不上
-    scenario_path.write_text(
-        scenario_path.read_text(encoding="utf-8") + "\n# tampered\n", encoding="utf-8"
-    )
+    # 现场改一个参数 → 内容指纹对不上
+    data = yaml.safe_load(scenario_path.read_text(encoding="utf-8"))
+    data["platforms"][0]["emitters"][0]["pt_w"] = 2.0e5
+    scenario_path.write_text(yaml.safe_dump(data, allow_unicode=True), encoding="utf-8")
     problems = verify_submission(payload, suite)
     assert any("内容已改动" in problem for problem in problems)
 
@@ -212,9 +220,9 @@ def test_cli_submit_and_verify(tmp_path, scenario_path):
 
     assert main(["bench", "--verify", str(files[0]), "--suite", str(suite_path)]) == 0
 
-    scenario_path.write_text(
-        scenario_path.read_text(encoding="utf-8") + "\n# tamper\n", encoding="utf-8"
-    )
+    data = yaml.safe_load(scenario_path.read_text(encoding="utf-8"))
+    data["platforms"][1]["emitters"][0]["pj_w"] = 900.0
+    scenario_path.write_text(yaml.safe_dump(data, allow_unicode=True), encoding="utf-8")
     assert main(["bench", "--verify", str(files[0]), "--suite", str(suite_path)]) == 1
 
 

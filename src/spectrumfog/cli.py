@@ -664,7 +664,11 @@ def _bench(args: argparse.Namespace) -> int:
         except (OSError, json.JSONDecodeError) as exc:
             print(f"[错误] 读不了提交物：{exc}", file=sys.stderr)
             return 1
-        problems = verify_submission(payload, suite)
+        try:
+            problems = verify_submission(payload, suite)
+        except (ValueError, FileNotFoundError) as exc:
+            print(f"[错误] 校验时读不了想定：{exc}", file=sys.stderr)
+            return 1
         if problems:
             print("[失败] 提交物与当前想定集合不一致：", file=sys.stderr)
             for problem in problems:

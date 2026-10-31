@@ -104,6 +104,7 @@ waypoints:
 | `gain_db` | float | 必填 | 天线增益 [dBi]，单站收发共用 |
 | `sigma_m2` | float > 0 | 必填 | 目标 RCS [m²]（虚构值） |
 | `loss_db` | float ≥ 0 | 0 | 系统损耗 [dB] |
+| `processing_gain_db` | float ≥ 0 | 0 | 脉冲压缩 / 相干积累的处理增益 [dB]；0 = 关闭。开启后等效于干扰机功率除以 10^(Gp/10)，见 physics.md §3.9 |
 
 ### emitters[] — `kind: decoy`（T3b）
 

@@ -79,6 +79,9 @@ scenario       policy             reward  jammed  exposed  Pd mean   J/S mean   
 06_decoy       stealth         60.0±  0    100%       0%    0.363       0.00          —
 06_decoy       random          59.5±  0    100%       0%    0.137       0.55          —
 06_decoy       always-jam      58.8±  0    100%       0%    0.000       1.17          —
+07_gain        stealth          3.5±  3      4%       3%    0.924       0.01         46
+07_gain        random        -184.1± 18      0%      30%    0.887       0.01          5
+07_gain        always-jam    -319.0± 16      0%      51%    0.849       0.01          2
 ```
 
 **怎么读**：
@@ -94,6 +97,9 @@ scenario       policy             reward  jammed  exposed  Pd mean   J/S mean   
 * `04_fog` 有 3 个红方辐射源、虚警率 5e-3，蛮干反而能压住（Pd 0）且暴露只有 16%，
   因为它的干扰机离雷达最近、离 ESM 最远。
 * `05_mobile` 三方都在动，蛮干仍然赢——说明在这组参数下"机动"没有改变力量对比。
+* `07_gain` 把处理增益开到 40 dB，干扰在物理上就无效了（J/S 0.01）。于是
+  "开机的每一帧"都只是在当靶子：蛮干 −319 分，全程静默的 `stealth` +3.5 分——
+  这一行是"没有效果的干扰不如不干扰"的量化版本。
 
 **没有一个策略通吃**。这不是 bug：几份想定的能量差两个数量级，
 "最优打法"本来就不同——这也是为什么要有 benchmark，而不是一个调好的 demo。
@@ -117,10 +123,11 @@ spectrumfog bench --verify submissions/你的名字-*.json            # 自检
 spectrumfog bench --leaderboard submissions --write-md docs/leaderboard.md
 ```
 
-提交物是自包含的 JSON：`suite` 版本、种子、策略、**每份想定文件的 sha256**、
+提交物是自包含的 JSON：`suite` 版本、种子、策略、**每份想定的内容指纹**、
 18 行结果、运行环境的 Python / numpy / gymnasium 版本。没有服务器，靠三件事保证可比：
 
-1. `--verify` 用当前文件重算 sha256，改一个数字就报"想定内容已改动"；
+1. `--verify` 用当前想定重算**内容指纹**（解析后的规范化 JSON，不是文件字节），
+   改一个物理参数就报"想定内容已改动"，而改注释、缩进不影响——这条是踩过坑才改的；
 2. 版本号写进提交物，换尺子必然对不上；
 3. 排名页由 `submissions/*.json` 生成，不手写。
 

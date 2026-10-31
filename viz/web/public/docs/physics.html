@@ -293,6 +293,52 @@ TDOA：  [ (|p − s_i| − |p − s_ref|)/c − (toa_i − toa_ref) ] / √(σ_
 <p>注意：诱饵不能对抗噪声压制。03_triad 里 90 W 的同频干扰机把雷达整个压住时，
 诱饵（等效 6 m²）和真目标一起消失，<code>decoy_detected_fraction</code> 为 0——
 诱饵骗的是"看得见的雷达"，不是"被致盲的雷达"。</p>
+<h3 id="39">3.9 处理增益（可选，默认关闭）</h3>
+<p>雷达发射机上的 <code>processing_gain_db</code>（默认 0）。非零时：</p>
+<pre><code>J/S_eff = (Pj_rx / Pr) / Gp,    Gp = 10^(Gp_dB/10)
+</code></pre>
+<p>也就是<strong>等效于把干扰机功率除以 Gp</strong>。因为 <code>pj_w</code> 在引擎里只出现一次（链路结算前统一
+除以 Gp），所以 J/S、Pd、烧穿距离、检测距离全部自动跟着变，没有第二套公式。</p>
+<p>标度关系：自屏蔽烧穿距离 ∝ √Gp；给定站距下的探测边界 ∝ Gp^(1/4)。</p>
+<p><strong>口径</strong>：这对"波形与雷达调制不匹配的宽带噪声干扰机"成立——信号相干积累，
+干扰只非相干相加。若干扰机与雷达波形完全匹配（转发式、相关干扰），这个增益对 J/S
+无效。本模型取<strong>对雷达有利</strong>的口径，所以它是"最好情况"，不是"必然结果"。</p>
+<p><code>01_duel</code> 与 <code>07_gain</code> 同参数，只差这个字段（601 帧统计）：</p>
+<table>
+<thead>
+<tr>
+<th>Gp</th>
+<th>J/S @ 30 km</th>
+<th>Pd</th>
+<th>自屏蔽 R_bt</th>
+<th>601 帧命中</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>85.63</td>
+<td>1.2e-6</td>
+<td>3.24 km</td>
+<td>0</td>
+</tr>
+<tr>
+<td>20 dB</td>
+<td>0.856</td>
+<td>1.7e-3</td>
+<td>32.4 km</td>
+<td>2</td>
+</tr>
+<tr>
+<td>40 dB</td>
+<td>0.0086</td>
+<td>0.849</td>
+<td>324 km</td>
+<td>505</td>
+</tr>
+</tbody>
+</table>
+<p>注意中间那行：<strong>20 dB（功率 ×100）远远不够</strong>。要压回去大约需要 40 dB。</p>
 <h2 id="4">4. 裁决记录</h2>
 <h3 id="41-g1-g2">4.1 烧穿距离里的增益指数：G¹，不是 G²</h3>
 <p>PROJECT.md §6.1 写的是</p>
@@ -380,9 +426,10 @@ TDOA：  [ (|p − s_i| − |p − s_ref|)/c − (toa_i − toa_ref) ] / √(σ_
 <h2 id="7">7. 假设与已知缺口</h2>
 <p>建模时明确接受的简化，改动前请先读这一节：</p>
 <ol>
-<li><strong>单站、无处理增益</strong>。没有脉压、相干积累、MTI/PD 滤波。
-   后果：干扰效能被高估——等效"够用的干扰功率"偏小。
-   若加 20 dB 处理增益，J/S 降 100 倍，R_bt 涨约 10 倍。</li>
+<li><strong>单站，处理增益默认关闭</strong>。<code>processing_gain_db</code> 默认 0（= 没有脉压、相干积累、
+   MTI/PD 滤波），后果是干扰效能被高估——"够用的干扰功率"偏小。字段本身已经实现
+   （见 §3.9），想开就在想定里写 <code>processing_gain_db: 40</code>。<strong>注意 20 dB 不够</strong>：
+   J/S 只降到 0.86，601 帧命中 2 帧。</li>
 <li><strong>Swerling I 单脉冲闭式对 SNR 很钝</strong>：Pfa = 1e-6 时 Pd = 0.9 需要约 21 dB SNR，
    而不是经验直觉的 13 dB。这不是 bug，是闭式的形状；做检测距离估算时别按 13 dB 拍。
    推论：<strong>"烧穿"不等于"能检测"</strong>。01_duel 里 R_bt = 3.24 km，但干扰下 Pd = 0.5 的距离只有 0.75 km

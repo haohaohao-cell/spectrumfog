@@ -197,18 +197,21 @@ spectrumfog run scenarios/01_duel.yaml             # 静态曲线：烧穿 / Pd�
 </tr>
 </tbody>
 </table>
-<h2 id="_3">两个反直觉的结果（免得你以为算错了）</h2>
+<h2 id="_3">三个反直觉的结果（免得你以为算错了）</h2>
 <p><strong>1. 烧穿 ≠ 能检测。</strong> <code>01_duel</code>（150 kW / 35 dBi 雷达，90 W 干扰机在 30 km）里，
 J/S = 1 的烧穿半径是 3.24 km，但干扰下真正还能维持 Pd = 0.5 的距离只有 0.75 km——差了 4 倍多。
 因为 J/S = 1 只是把信噪比砍掉 3 dB，而这里的 Swerling I 闭式要 Pd = 0.5 得约 20 dB。
 <strong>"目标在烧穿圈内"不等于"雷达看得见它"。</strong></p>
 <p><strong>2. 1 W 干扰机能压制 150 kW 雷达。</strong> <code>02_standoff</code> 里，1 W 干扰机在 60 km、
-目标在 12 km。因为 v1 没有处理增益（脉压、相干积累、MTI）：
+目标在 12 km。因为想定默认关闭了处理增益（脉压、相干积累、MTI）：
 100 MHz 上摊开的 1 W 落进 2 MHz 接收机只剩 20 mW，而 12 km 处的回波本身只有 −67 dBm，
-噪声底是 −108 dBm。若补上 20 dB 处理增益，烧穿距离会涨约 10 倍——所以这些"过小的干扰功率"
-是模型缺口的产物，不是仿真结果。</p>
-<p>这两条都是 <a href="design.html">docs/design.md</a> §5–§6 里写明的取舍，
-完整缺口清单在 <a href="physics.html">docs/physics.md</a> §7（无处理增益、无多径地形、无航迹状态机）。</p>
+噪声底是 −108 dBm。这个数字是"没有处理增益"这个前提的产物，不是仿真结果。</p>
+<p><strong>3. 光有 20 dB 处理增益还不够。</strong> <code>07_gain</code> 与 <code>01_duel</code> 同一组参数，只把
+<code>processing_gain_db</code> 从 0 提到 40：J/S 从 85.6 掉到 0.0086，Pd 从 1e-6 升到 0.85，
+601 帧里从 0 次命中变成 505 次。但中间那一档 20 dB 只把 J/S 压到 0.86，
+<strong>601 帧只命中 2 帧</strong>——"加 20 dB 就翻盘"是错觉，要压回去大约需要 40 dB。</p>
+<p>这三条都是 <a href="design.html">docs/design.md</a> §5–§6 里写明的取舍，
+完整缺口清单在 <a href="physics.html">docs/physics.md</a> §7（处理增益默认关、无多径地形、无航迹状态机）。</p>
 <h2 id="web-t2">Web 交互（T2）</h2>
 <p>拖动干扰机，覆盖热力图、跟踪边界和两条曲线实时跟着变；<strong>没有后端</strong>。
 物理仍然只有 Python 这一份：<code>export-web</code> 把 Pd/J-S 编译成 (Rt, Rj) 查表，
@@ -291,6 +294,9 @@ spectrumfog aar out/01_duel.jsonl                    # 出 out/01_duel_aar.html
 06_decoy       stealth         60.0±  0    100%       0%    0.363       0.00          —
 06_decoy       random          59.5±  0    100%       0%    0.137       0.55          —
 06_decoy       always-jam      58.8±  0    100%       0%    0.000       1.17          —
+07_gain        stealth          3.5±  3      4%       3%    0.924       0.01         46
+07_gain        random        -184.1± 18      0%      30%    0.887       0.01          5
+07_gain        always-jam    -319.0± 16      0%      51%    0.849       0.01          2
 </code></pre>
 <p>读法：90 W 的 <code>01_duel</code> 里蛮干就能赢（30 km 处 Pd 已压到 1e-6，靠近纯属浪费）；
 只有 1 W 的 <code>02_standoff</code> 里必须贴脸，但贴脸就被三站交汇——<code>stealth</code> 打一下就跑，

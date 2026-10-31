@@ -52,6 +52,14 @@ class RadarEmitter(_EmitterBase):
         serialization_alias="loss_db",
         description="系统损耗 [线性]，YAML 里写 loss_db",
     )
+    processing_gain_db: float = Field(
+        default=0.0,
+        ge=0.0,
+        description=(
+            "脉冲压缩 / 相干积累的处理增益 [dB]。默认 0 = 关闭，既有想定的数字不变；"
+            "开启后等效于把干扰机功率除以 10^(Gp/10)，见 docs/physics.md §3.9"
+        ),
+    )
 
     @field_validator("gain", mode="before")
     @classmethod
@@ -72,6 +80,11 @@ class RadarEmitter(_EmitterBase):
     def loss_db(self) -> float:
         """损耗的 dB 值（只用于展示 / 日志；物理层用 ``loss``）。"""
         return 10.0 * math.log10(self.loss)
+
+    @property
+    def processing_gain(self) -> float:
+        """处理增益的线性值（1.0 = 未启用）。"""
+        return 10.0 ** (self.processing_gain_db / 10.0)
 
 
 class NoiseJammerEmitter(_EmitterBase):

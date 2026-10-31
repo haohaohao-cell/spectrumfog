@@ -140,7 +140,7 @@ What's working today (v0.2, Python + a static web page):
   one self-contained event. Same scenario + seed reproduces byte-identical logs.
   That's the part I care most about: without it, "why did I lose" is unanswerable
   and any AAR is fiction.
-- Six scenarios: a duel (single radar vs a self-screening jammer); a standoff case
+- Seven scenarios: a duel (single radar vs a self-screening jammer); a standoff case
   where a jammer closes from 60 km to 4 km and the radar's tracking boundary
   collapses from 20.5 km to 5.3 km (this one is the 10 s GIF); a radar + comms
   link + two-band jamming case where the link availability drops to 31%; a
@@ -381,7 +381,7 @@ Physics write-up: https://github.com/haohaohao-cell/spectrumfog/blob/main/docs/p
 | 会被问 | 怎么答（别防御，给数） |
 |---|---|
 | "这不是军事软件吗？" | 定位是 educational / research simulation；参数全虚构，不含任何真实装备数据；Apache-2.0 公开可审。 |
-| "1 W 干扰机就能压制 150 kW 雷达？假的吧" | 对，看着不合理，因为这个模型没有处理增益。落进 2 MHz 的只有 20 mW，而 12 km 处回波是 -67 dBm。缺口写在 docs/physics.md §7 第 1 条，加 20 dB 处理增益的话烧穿距离会涨约 10 倍。 |
+| "1 W 干扰机就能压制 150 kW 雷达？假的吧" | 对，看着不合理，因为想定默认关闭了处理增益。落进 2 MHz 的只有 20 mW，而 12 km 处回波是 -67 dBm。字段已经实现（默认 0，可用）：`07_gain` 与 `01_duel` 同参数、只加 40 dB，J/S 从 85.6 掉到 0.0086、Pd 从 1e-6 到 0.85。顺带一提，20 dB 不够——601 帧只命中 2 帧。 |
 | "Pd 公式太粗糙" | 用的 Swerling I 单脉冲闭式，是为了能反解检测距离。它对 SNR 偏钝（Pfa=1e-6 时要 21 dB 才到 0.9），这是选择的代价，不是笔误。 |
 | "为什么不直接调现成的雷达库？" | 这个项目的卖点是"能逐行审的物理"和确定性 replay，引入第三方物理就没法保证了。 |
 | "Python 跑得动吗？" | 热路径是闭式解，600 tick 的想定 1.3 s；向量化，不写逐点循环。 |

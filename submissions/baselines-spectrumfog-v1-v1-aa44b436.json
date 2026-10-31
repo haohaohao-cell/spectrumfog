@@ -1,7 +1,7 @@
 {
-  "schema": "spectrumfog.submission/1",
+  "schema": "spectrumfog.submission/2",
   "label": "baselines",
-  "created": "2026-10-27T21:10:39+08:00",
+  "created": "2026-10-31T17:53:03+08:00",
   "suite": {
     "name": "spectrumfog-v1",
     "version": 1,
@@ -19,12 +19,12 @@
     ]
   },
   "scenarios": {
-    "scenarios/01_duel.yaml": "sha256:4e0c1da7f6212cb6de6f2be9d55c2ee59ad22dc8325adfea3e996f0146ac8ddd",
-    "scenarios/02_standoff.yaml": "sha256:06bf3a2c3485db3a6b5977b6e7cbe7c2c48137f5a3d2c47ac1a15dd3de6ae414",
-    "scenarios/03_triad.yaml": "sha256:89ab04005465b6e87246f0cccf7cbc3097cce25a04c76fffda31fbb6190afcf0",
-    "scenarios/04_fog.yaml": "sha256:2ad186b1579a331736b7907af1c8811b2863b017af2939b10b5a95f06350b617",
-    "scenarios/05_mobile.yaml": "sha256:6bc701e5287668d1a29ddaae8ba464b1d9a9041ca627917ff3d67aead990b181",
-    "scenarios/06_decoy.yaml": "sha256:ebdc8830719f29978c731ed374ecde03b2fdda92bb868672dfa6c95c974596a6"
+    "scenarios/01_duel.yaml": "sha256:673ef3e93c9b6192fc8ed58dc3a5c12c621ff52b0e48ad6dc9ce9e84aa44b436",
+    "scenarios/02_standoff.yaml": "sha256:dca7e002c1635b1e4642350570174f052310065754591bf4e08d042b286df404",
+    "scenarios/03_triad.yaml": "sha256:5bfa95788031fbbc0d625626cb3f4a4343763275270eab8d56cf3521653952a2",
+    "scenarios/04_fog.yaml": "sha256:ee14e3328bed369bd98c249bbdaf7527b20bbe8387e6e593bb0c9c5b304137c4",
+    "scenarios/05_mobile.yaml": "sha256:406982f476b3048c12733eabc009c0ec74774b0d16427015ef0e22fbf5965f18",
+    "scenarios/06_decoy.yaml": "sha256:96cd21d75e3247036893a597600b6fbabf33ea299fc6f59bc5f211ae6f574f21"
   },
   "score": 45.7607,
   "rows": [

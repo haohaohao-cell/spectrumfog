@@ -343,6 +343,7 @@ star 主要来自发布，不是来自代码量。
 - [x] T2 Web 交互（2026-10-27：`export-web` 数据包 + Vite/React 交互页 + Pages 上线）
 - [x] T3a AAR 复盘分析（2026-10-27：`spectrumfog aar` 出时间线 + 暴露时长 + 留一法归因 + 单页 HTML）
 - [x] T3b 平台化（2026-10-27：Gymnasium 环境 + 3 个 baseline + 6 个想定 + 文档站 + 提交物校验 + 排行榜）
+- [x] 后续增量 A（2026-10-31）：处理增益 `processing_gain_db`（默认关，`07_gain` 用 40 dB 做对照）+ 提交物改按内容指纹校验
 
 ### 交付索引
 

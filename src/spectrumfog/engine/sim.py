@@ -69,7 +69,11 @@ class Simulation:
             radar_jammer if radar_jammer is not None else scenario.primary_jammer()
         )
         target_platform = self._target_platform(jammer_platform)
-        params = scenario.link_params(radar_platform.id, jammer_platform.id)
+        params = dict(scenario.link_params(radar_platform.id, jammer_platform.id))
+        # 处理增益（默认 0 dB = 1.0，既有想定完全不受影响）。开启后等效于
+        # 把干扰机功率除以 Gp：J/S_eff = (Pj_rx/Pr)/Gp，见 docs/physics.md §3.9。
+        processing_gain = float(radar_emitter.processing_gain)
+        params["pj_w"] = params["pj_w"] / processing_gain
         environment = scenario.environment
 
         pn_w = float(
@@ -125,6 +129,7 @@ class Simulation:
             "noise_power_w": pn_w,
             "cep_threshold_m": self._cep_threshold(),
             "localize_target": self._localize_target(),
+            "processing_gain_db": float(radar_emitter.processing_gain_db),
         }
 
         events: list[dict[str, Any]] = [meta]
@@ -228,6 +233,7 @@ class Simulation:
                     "pd": pd,
                     "burn_through_m": burn_through_m,
                     "detection_ring_m": detection_ring_m,
+                    "processing_gain_db": float(radar_emitter.processing_gain_db),
                 }
             )
             events.append(

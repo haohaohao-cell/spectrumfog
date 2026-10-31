@@ -34,7 +34,7 @@ __all__ = [
     "write_submission",
 ]
 
-SUBMISSION_SCHEMA = "spectrumfog.submission/1"
+SUBMISSION_SCHEMA = "spectrumfog.submission/2"
 
 
 @dataclass(frozen=True)
@@ -54,13 +54,25 @@ class Suite:
         return len(self.seeds)
 
     def scenario_hashes(self) -> dict[str, str]:
-        """每份想定文件的 sha256（相对仓库根）。"""
+        """每份想定的**内容**指纹（规范化 JSON 的 sha256）。
+
+        刻意不哈希文件字节：改注释、调缩进、换行符都不该让别人的提交物失效，
+        真正要防的是"改了一个参数"。想定解析成模型之后的规范 JSON 才是物理输入。
+        """
+        from ..model.scenario import load_scenario
+
         hashes: dict[str, str] = {}
         for relative in self.scenario_paths:
             path = Path(relative)
             if not path.is_file():
                 raise FileNotFoundError(f"想定文件不存在：{relative}")
-            hashes[relative] = "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
+            scenario = load_scenario(path)
+            canonical = json.dumps(
+                scenario.model_dump(mode="json"), sort_keys=True, ensure_ascii=False
+            )
+            hashes[relative] = (
+                "sha256:" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+            )
         return hashes
 
 
