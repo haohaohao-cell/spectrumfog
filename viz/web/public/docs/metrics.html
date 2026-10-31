@@ -264,6 +264,39 @@ score:
 <p>航迹本身不知道哪个是真的——这正是欺骗的定义。事后归因时，
 把每条雷达航迹的位置与"真目标 / 诱饵视在位置"比距离，谁近就标成谁。
 <code>false_track_fraction = 1.0</code> 意味着蓝方雷达<strong>只</strong>锁着假目标。</p>
+<h3 id="imm-jpda">IMM + JPDA（可选跟踪器）</h3>
+<p><code>Simulation(..., tracker="imm")</code> 换成双模型交互滤波 + 概率数据关联：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th><code>cv</code>（默认）</th>
+<th><code>imm</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>运动模型</td>
+<td>单个匀速</td>
+<td>平稳（σa=5 m/s²）/ 机动（σa=60 m/s²）两个</td>
+</tr>
+<tr>
+<td>关联</td>
+<td>最近邻，只挑一个</td>
+<td>JPDA：门内按似然加权成"合成量测"</td>
+</tr>
+<tr>
+<td>长处</td>
+<td>简单、可预测</td>
+<td>目标机动、杂波密集（<code>04_fog</code> 的 5e-3 虚警率）</td>
+</tr>
+</tbody>
+</table>
+<p>机制：每帧先按转移矩阵混合两个模型的状态，再各自预测；更新时用<strong>各自的似然</strong>
+调整模型概率 μ（μ_j ∝ Λ_j·μ_j），最后按 μ 加权输出。μ 有 1e-3 的下限——
+概率一旦变成 0，之后再像也回不来（这是 IMM 的经典坑）。</p>
+<p><code>04_fog</code> 上的对照：确认覆盖率 41%（cv）→ 43%（imm），航迹数都是 1。
+提升不大是<strong>预期内</strong>的：那份想定的难点是杂波，不是机动。</p>
   </main>
 </div>
 <footer>参数全部虚构 · 仅用于教学 / 研究仿真 · Apache-2.0 + CC BY 4.0</footer>

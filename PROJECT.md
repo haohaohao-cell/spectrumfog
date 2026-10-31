@@ -348,6 +348,7 @@ star 主要来自发布，不是来自代码量。
 - [x] 后续增量 C（2026-10-31）：假航迹——雷达航迹层 + 诱饵距离欺骗（RGPO），`false_track_fraction` 进入摘要与 AAR
 - [x] 后续增量 D（2026-10-31）：双人对局 `08_duel_2p`——蓝方雷达 EMCON 三档动作，暴露按确认跟踪判定，`bench/duel.py` 含 3×3 baseline 矩阵
 - [x] 后续增量 E（2026-10-31）：自训练 `bench/selfplay.py`（线性 softmax + CEM，红蓝交替）——机制跑通；脉冲策略未涌现，原因已写入 docs/bench.md
+- [x] 后续增量 F（2026-10-31）：IMM + JPDA 跟踪器（`engine/imm.py`，`Simulation(tracker="imm")` 可切换）
 
 ### 交付索引
 
@@ -356,7 +357,7 @@ star 主要来自发布，不是来自代码量。
 | 交互演示（拖干扰机） | <https://haohaohao-cell.github.io/spectrumfog/> |
 | 文档站（9 页） | <https://haohaohao-cell.github.io/spectrumfog/docs/> |
 | 排行榜 | <https://haohaohao-cell.github.io/spectrumfog/docs/leaderboard.html> |
-| 仓库 / 发布 | <https://github.com/haohaohao-cell/spectrumfog> · v0.2.0 |
+| 仓库 / 发布 | <https://github.com/haohaohao-cell/spectrumfog> · v0.3.0 |
 | 想定集合（排行榜基准） | `scenarios/suite_v1.yaml`（6 想定 × 5 种子 × 3 策略） |
 | 测试 | 182 项 Python + 16 项前端，CI 全绿 |
 | 发布文案 | `docs/launch.md`（五个渠道） |

@@ -27,6 +27,7 @@ from ..model.platform import Platform
 from ..model.scenario import Scenario
 from ..physics import comms, propagation, radar
 from . import detect, fusion
+from .imm import IMMTracker
 from .tracker import Tracker
 from .clock import Clock
 
@@ -51,14 +52,18 @@ class Simulation:
         *,
         pfa: float = 1.0e-6,
         pd_threshold: float = 0.5,
+        tracker: str = "cv",
     ) -> None:
         if not 0.0 < pfa < 1.0:
             raise ValueError(f"pfa 必须落在 (0, 1)，收到 {pfa!r}")
         if not 0.0 < pd_threshold < 1.0:
             raise ValueError(f"pd_threshold 必须落在 (0, 1)，收到 {pd_threshold!r}")
+        if tracker not in ("cv", "imm"):
+            raise ValueError(f"tracker 只能是 'cv' 或 'imm'，收到 {tracker!r}")
         self.scenario = scenario
         self.pfa = float(pfa)
         self.pd_threshold = float(pd_threshold)
+        self.tracker_kind = tracker
 
     # --- 主循环 -----------------------------------------------------------
 
@@ -354,7 +359,7 @@ class Simulation:
                     )
                 for emitter_id, fixes in by_emitter.items():
                     tracker = trackers.setdefault(
-                        emitter_id, Tracker(dt=scenario.meta.dt)
+                        emitter_id, self._make_tracker(scenario.meta.dt)
                     )
                     for track_event in tracker.step(fixes, tick.t):
                         track_event["emitter"] = emitter_id
@@ -400,6 +405,12 @@ class Simulation:
         radial = np.array([[ux * ux, ux * uy], [uy * ux, uy * uy]]) * sigma_r**2
         cross = np.array([[uy * uy, -uy * ux], [-ux * uy, ux * ux]]) * sigma_cross**2
         return (float(target_pos[0]), float(target_pos[1])), radial + cross
+
+    def _make_tracker(self, dt: float):
+        """按 ``tracker`` 选择跟踪器：cv = 单模型最近邻，imm = 双模型 + JPDA。"""
+        if self.tracker_kind == "imm":
+            return IMMTracker(dt=dt)
+        return Tracker(dt=dt)
 
     def _jammer_for(self, freq_hz: float, bw_hz: float):
         """挑一台与给定频段重叠的干扰机；没有就返回 None。"""
