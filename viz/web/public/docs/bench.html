@@ -259,7 +259,138 @@ spectrumfog bench --leaderboard submissions --write-md docs/leaderboard.md
 </code></pre>
 <p>然后 <code>spectrumfog bench --all --policies random,always-jam,stealth,my-policy</code>
 （策略要先注册进 <code>bench/policies.py</code> 的 <code>POLICIES</code>）。</p>
+<h2 id="vs-emcon">双人对局：红方干扰机 vs 蓝方雷达（EMCON）</h2>
+<p>前面所有想定里蓝方都是环境的一部分。<code>08_duel_2p</code> 把蓝方也变成决策者：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>动作</th>
+<th>得分</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>红方</td>
+<td>15 个（5 方向 × 3 功率档）</td>
+<td>蓝方开机且 Pd &lt; 0.5 得 +1</td>
+</tr>
+<tr>
+<td>蓝方</td>
+<td>3 个（关机 / 半功率 / 满功率）</td>
+<td>蓝方开机且 Pd ≥ 0.5 得 +1</td>
+</tr>
+</tbody>
+</table>
+<p><strong>只在蓝方开机时结算</strong>——两边都在挑时间。各自被对方<strong>确认跟踪</strong>（M-of-N，不是单帧）
+扣 1 分，开机还有 0.02·功率档 的成本。</p>
+<table>
+<thead>
+<tr>
+<th>红方</th>
+<th>蓝方</th>
+<th>红方</th>
+<th>蓝方</th>
+<th>红方暴露</th>
+<th>蓝方暴露</th>
+<th>蓝方开机</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>stay-jam</td>
+<td>always-on</td>
+<td>-4.0</td>
+<td><strong>-304.0</strong></td>
+<td>99%</td>
+<td>99%</td>
+<td>100%</td>
+</tr>
+<tr>
+<td>stay-jam</td>
+<td>pulse</td>
+<td><strong>-244.0</strong></td>
+<td>-1.2</td>
+<td>99%</td>
+<td>0%</td>
+<td>20%</td>
+</tr>
+<tr>
+<td>stay-jam</td>
+<td>reactive</td>
+<td>-220.0</td>
+<td>-110.7</td>
+<td>99%</td>
+<td>36%</td>
+<td>28%</td>
+</tr>
+<tr>
+<td>silent</td>
+<td>always-on</td>
+<td>0.0</td>
+<td>-4.0</td>
+<td>0%</td>
+<td>99%</td>
+<td>100%</td>
+</tr>
+<tr>
+<td>silent</td>
+<td>pulse</td>
+<td>0.0</td>
+<td><strong>+58.8</strong></td>
+<td>0%</td>
+<td>0%</td>
+<td>20%</td>
+</tr>
+<tr>
+<td>silent</td>
+<td>reactive</td>
+<td>0.0</td>
+<td>-26.7</td>
+<td>0%</td>
+<td>36%</td>
+<td>28%</td>
+</tr>
+<tr>
+<td>raider</td>
+<td>always-on</td>
+<td>-37.2</td>
+<td>-137.0</td>
+<td>56%</td>
+<td>99%</td>
+<td>100%</td>
+</tr>
+<tr>
+<td>raider</td>
+<td>pulse</td>
+<td>-145.6</td>
+<td>+33.3</td>
+<td>56%</td>
+<td>0%</td>
+<td>20%</td>
+</tr>
+<tr>
+<td>raider</td>
+<td>reactive</td>
+<td>-133.6</td>
+<td>-64.2</td>
+<td>56%</td>
+<td>36%</td>
+<td>28%</td>
+</tr>
+</tbody>
+</table>
+<p>三条结论：</p>
+<ol>
+<li><strong>一直开机是最差的策略</strong>（-304 / -4）：150 kW 的雷达在红方 ESM 眼里太亮了。</li>
+<li><strong>脉冲式开机（每 5 帧开 1 帧）是甜点</strong>：看得见目标，却凑不够 3 次命中，红方跟不住。</li>
+<li><strong>红方"开满压制"只有在蓝方一直开机时才划算</strong>（-4 vs -244）：蓝方一躲，红方的
+   每一帧辐射都变成纯暴露。</li>
+</ol>
+<p>这就是"被跟踪才算暴露"这条规则的意义：如果按"被发现一次"扣分，蓝方永远不可能正分，
+博弈就退化成"谁都不开灯"。</p>
 <h2 id="_7">已知限制</h2>
+<h2 id="_8">已知限制</h2>
 <ol>
 <li><strong>单智能体</strong>：只控制红方干扰机；蓝方（雷达 + ESM 星座）是环境的一部分。</li>
 <li><strong>动作离散</strong>：没有连续功率/航向；也没做动作屏蔽（不合法的动作不会出现，但也没优化）。</li>

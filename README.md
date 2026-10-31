@@ -61,6 +61,7 @@ spectrumfog run scenarios/01_duel.yaml             # 静态曲线：烧穿 / Pd�
 | Web 交互（拖动干扰机 → 热力图与曲线） | ✅ 线上已部署 |
 | Gymnasium 环境 + 3 个 baseline + 6 个想定 | ✅ T3b |
 | 文档站 + 提交物校验 + 排行榜 | ✅ T3b |
+| 航迹层 · 假航迹 · 双人对局 | ✅ T3b+ |
 
 ## 三个反直觉的结果（免得你以为算错了）
 
@@ -201,7 +202,9 @@ scenarios/
   03_triad.yaml       T3b：雷达 + 通信链路 + 双频段干扰机（链路可用率）
   04_fog.yaml         T3b：三个辐射源 + 5e-3 虚警率（多目标 + 虚假目标）
   05_mobile.yaml      T3b：雷达 / 干扰机 / 目标三方同时机动
-  06_decoy.yaml       T3b：转发式诱饵骗雷达（等效 RCS 6.3 m²）
+  06_decoy.yaml       T3b：转发式诱饵骗雷达（等效 RCS 6.3 m² + 3 km 距离欺骗）
+  07_gain.yaml        T3b：处理增益 A/B（同参数，40 dB 对照）
+  08_duel_2p.yaml     T3b+：双人对局（蓝方雷达 ECOM，红方干扰机）
 tests/              182 项：物理、想定、时钟、回放、确定性、动画、融合、AAR、通信链路、Gym、Web 数据包、CLI
 viz/web/src/        16 项前端单测（查表解码、插值、首屏渲染）
 docs/               physics.md（公式与假设）· design.md（建模取舍）· scenario.md（YAML schema）

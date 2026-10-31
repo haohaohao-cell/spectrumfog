@@ -1,0 +1,101 @@
+# 08_duel_2p — 双向暴露（T3b+）
+#
+# 前面所有想定里，蓝方都是环境的一部分：雷达一直开着，红方只能躲。
+# 这一份把蓝方也变成决策者：**雷达开机才能看见，开机就会被红方的 ESM 看见**。
+#
+#   红方：干扰机（15 个动作：5 方向 × 3 功率档）
+#   蓝方：雷达（3 个动作：关机 / 半功率 / 满功率）
+#
+# 两边的胜负条件是对称的：
+#   红方：目标处 Pd < 0.5 得 +1；被蓝方定位 −1
+#   蓝方：目标处 Pd ≥ 0.5 得 +1；被红方定位 −1
+#
+# 红方这里多了三部 ESM（前面几份想定红方都是"瞎子"）——没有它们，
+# 蓝方开不开机对红方没有代价，EMCON 就失去了意义。
+#
+# 全部参数虚构。
+
+meta:
+  name: 08_duel_2p
+  seed: 51
+  dt: 1.0
+  duration: 300
+
+environment:
+  noise_figure_db: 3.0
+  temperature_k: 290
+
+platforms:
+  - id: radar_a
+    side: blue
+    pos: [0, 0]
+    emitters:
+      - kind: radar
+        freq_hz: 3.0e9
+        bw_hz: 2.0e6
+        pt_w: 1.5e5
+        gain_db: 35
+        sigma_m2: 1.0
+        loss_db: 3
+
+  # 被探测/保护的目标（蓝方雷达要找它，红方在替它挡）
+  - id: target_c
+    side: red
+    pos: [25000, 6000]
+    emitters: []
+
+  # 红方干扰机：默认站距 40 km，能压住目标处的 Pd 但压不掉自己的暴露
+  - id: jammer_b
+    side: red
+    pos: [40000, 0]
+    emitters:
+      - kind: noise_jammer
+        freq_hz: 3.0e9
+        bw_hz: 1.0e8
+        pj_w: 200.0
+        gain_db: 0
+
+sensors:
+  # 蓝方 ESM：定位红方干扰机
+  - id: esm_b1
+    kind: esm
+    side: blue
+    pos: [0, -25000]
+    noise_figure_db: 8.0
+    bw_hz: 1.0e6
+  - id: esm_b2
+    kind: esm
+    side: blue
+    pos: [0, 25000]
+    noise_figure_db: 8.0
+    bw_hz: 1.0e6
+  - id: esm_b3
+    kind: esm
+    side: blue
+    pos: [-25000, 0]
+    noise_figure_db: 8.0
+    bw_hz: 1.0e6
+
+  # 红方 ESM：定位蓝方雷达（只有它开机时才有信号）
+  - id: esm_r1
+    kind: esm
+    side: red
+    pos: [45000, -20000]
+    noise_figure_db: 10.0
+    bw_hz: 1.0e6
+  - id: esm_r2
+    kind: esm
+    side: red
+    pos: [45000, 20000]
+    noise_figure_db: 10.0
+    bw_hz: 1.0e6
+  - id: esm_r3
+    kind: esm
+    side: red
+    pos: [60000, 0]
+    noise_figure_db: 10.0
+    bw_hz: 1.0e6
+
+objectives:
+  - {type: detect, target: target_c}
+  - {type: localize, target: jammer_b, cep_m: 500}
