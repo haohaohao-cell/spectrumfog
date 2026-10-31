@@ -26,6 +26,7 @@ from ..model.platform import Platform
 from ..model.scenario import Scenario
 from ..physics import comms, propagation, radar
 from . import detect, fusion
+from .tracker import Tracker
 from .clock import Clock
 
 __all__ = ["Simulation", "SimulationResult"]
@@ -137,6 +138,7 @@ class Simulation:
         pd_series: list[float] = []
         jammer_ranges: list[float] = []
         comms_states: list[bool] = []
+        trackers: dict[str, Tracker] = {}
         decoy_pd_series: list[float] = []
         decoy_detected: list[bool] = []
 
@@ -296,10 +298,23 @@ class Simulation:
                 )
                 for observation in observations:
                     events.append(observation.to_event())
-                for estimate_event in self._fuse_tick(
+                estimate_events = self._fuse_tick(
                     t_s=tick.t, observations=observations
-                ):
-                    events.append(estimate_event)
+                )
+                events.extend(estimate_events)
+                # --- 航迹层（T3b+）：每个辐射源一条独立航迹 ---
+                by_emitter: dict[str, list[tuple[list[float], list[list[float]]]]] = {}
+                for estimate_event in estimate_events:
+                    by_emitter.setdefault(estimate_event["target"], []).append(
+                        (estimate_event["pos"], estimate_event["cov"])
+                    )
+                for emitter_id, fixes in by_emitter.items():
+                    tracker = trackers.setdefault(
+                        emitter_id, Tracker(dt=scenario.meta.dt)
+                    )
+                    for track_event in tracker.step(fixes, tick.t):
+                        track_event["emitter"] = emitter_id
+                        events.append(track_event)
 
         summary = self._summarise(
             detected_series=detected_series,
@@ -311,6 +326,11 @@ class Simulation:
             comms_states=comms_states,
             decoy_pd=decoy_pd_series,
             decoy_detected=decoy_detected,
+            track_events=[
+                event for event in events if event["kind"] == "track"
+            ],
+            localize_target=self._localize_target(),
+            n_ticks=int(round(scenario.meta.duration / scenario.meta.dt)) + 1,
         )
         return SimulationResult(meta=meta, events=events, summary=summary)
 
@@ -512,6 +532,33 @@ class Simulation:
             )
         return estimates
 
+    @staticmethod
+    def _track_summary(
+        track_events: list[dict[str, Any]],
+        localize_target: str | None,
+        n_ticks: int | None,
+    ) -> dict[str, Any]:
+        """航迹统计：只统计"被定位目标"的航迹，其余辐射源只出现在事件流里。"""
+        if localize_target is None or n_ticks is None:
+            return {
+                "track_confirmed_fraction": None,
+                "first_track_s": None,
+                "track_lost_s": None,
+                "n_tracks": 0,
+            }
+        mine = [event for event in track_events if event.get("emitter") == localize_target]
+        confirmed_ticks = {
+            event["t"] for event in mine if event["status"] == "confirmed"
+        }
+        first_confirmed = min(confirmed_ticks) if confirmed_ticks else None
+        lost = [event["t"] for event in mine if event["status"] == "lost"]
+        return {
+            "track_confirmed_fraction": len(confirmed_ticks) / max(1, n_ticks),
+            "first_track_s": first_confirmed,
+            "track_lost_s": min(lost) if lost else None,
+            "n_tracks": len({event["track_id"] for event in mine}),
+        }
+
     def _comms_event(
         self,
         *,
@@ -671,6 +718,9 @@ class Simulation:
         comms_states: list[bool] | None = None,
         decoy_pd: list[float] | None = None,
         decoy_detected: list[bool] | None = None,
+        track_events: list[dict[str, Any]] | None = None,
+        localize_target: str | None = None,
+        n_ticks: int | None = None,
     ) -> dict[str, Any]:
         """两种口径分开报，别混：
 
@@ -710,6 +760,7 @@ class Simulation:
                 sum(decoy_detected) / len(decoy_detected) if decoy_detected else None
             ),
             "n_decoy_samples": len(decoy_pd or []),
+            **self._track_summary(track_events or [], localize_target, n_ticks),
         }
 
 

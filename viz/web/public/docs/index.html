@@ -224,7 +224,7 @@ npm run build                                 # dist/ 纯静态，可丢 GitHub 
 <p><img alt="Web 交互界面" src="images/web_explorer.png"></p>
 <p><em>初始状态：干扰机在 60 km，12 km 处的目标仍被跟踪（Pd 0.92），跟踪边界 20.5 km。
 把红色方块往雷达方向拖，边界和蓝色区域会一起收缩。</em></p>
-<h2 id="aar-t3a">AAR 复盘（T3a）</h2>
+<h2 id="aar-t3a-t3b">AAR 复盘（T3a / T3b+）</h2>
 <p><code>replay.jsonl</code> 进，单页 HTML 出：关键事件时间线、暴露时长、定位误差归因。
 结论句是自动生成的，每个数字都能由日志行复算：</p>
 <blockquote>
@@ -272,6 +272,9 @@ spectrumfog aar out/01_duel.jsonl                    # 出 out/01_duel_aar.html
 <p>"原因是 X" 不是形容词：<strong>留一法</strong>逐台去掉传感器重解一次，外加"只留测向 / 只留 TDOA"
 两组对照，都是同一套最小二乘，所以归因结论和定位结论不可能不一致。</p>
 <p><img alt="AAR 报告" src="images/aar_report.png"></p>
+<p>报告现在还会给出<strong>航迹</strong>：蓝方在 t=3 s 起批、t=99 s 丢失、确认覆盖 85%。
+这是和"单帧解出位置"不同的问题——航迹要连续命中 3 次才算确认，
+确认后还能滑行 5 帧，所以"漏一帧"和"跟丢了"终于是两件事。</p>
 <h2 id="baseline-t3b">Baseline 评测（T3b）</h2>
 <p><code>spectrumfog bench --all</code> 把五份想定变成 Gymnasium 决策问题，让三个策略各跑几局：</p>
 <pre><code>scenario       policy             reward  jammed  exposed  Pd mean   J/S mean     首告警[s]

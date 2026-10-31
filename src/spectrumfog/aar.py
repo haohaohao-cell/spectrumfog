@@ -51,6 +51,9 @@ class AarReport:
     timeline: tuple[KeyEvent, ...]
     attribution: tuple[dict[str, Any], ...]
     sentence: str
+    track_first_s: float | None = None
+    track_lost_s: float | None = None
+    track_confirmed_fraction: float | None = None
     map_data: dict[str, Any] = field(default_factory=dict)
 
 
@@ -148,6 +151,32 @@ def analyse(
     windows = exposure_windows(times, ceps, limit, dt=dt) if cep_series else ()
     exposure = t_expose(times, ceps, limit, dt=dt) if cep_series else 0.0
 
+    track_events = [
+        event
+        for frame in replay.frames
+        for event in frame.tracks
+        if event.get("emitter") == target
+    ]
+    confirmed_times = sorted(
+        {float(event["t"]) for event in track_events if event["status"] == "confirmed"}
+    )
+    lost_times = sorted(
+        {float(event["t"]) for event in track_events if event["status"] == "lost"}
+    )
+    track_first = confirmed_times[0] if confirmed_times else None
+    track_lost = lost_times[0] if lost_times else None
+    track_fraction = len(confirmed_times) / max(1, n_ticks)
+    if track_first is not None:
+        events.append(
+            KeyEvent(
+                track_first,
+                "航迹确认",
+                f"蓝方连续命中后确认跟踪 {target}",
+            )
+        )
+    if track_lost is not None:
+        events.append(KeyEvent(track_lost, "航迹丢失", f"{target} 的航迹滑行超时"))
+
     for sensor_id, t_s in sorted(first_detection.items(), key=lambda item: item[1]):
         events.append(KeyEvent(t_s, "首次截获", f"{sensor_id} 收到 {target} 的辐射"))
     if fixes:
@@ -183,6 +212,14 @@ def analyse(
         fix_rate=fix_rate,
     )
 
+    if track_first is not None:
+        tail = (
+            f"蓝方在 t={track_first:.0f} s 起批"
+            + (f"、t={track_lost:.0f} s 丢失航迹" if track_lost is not None else "并保持跟踪")
+            + f"，确认覆盖 {track_fraction:.0%}。"
+        )
+        sentence = sentence + " " + tail
+
     true_errors = [error for _, _, error in cep_series if math.isfinite(error)]
     return AarReport(
         emitter=target,
@@ -199,6 +236,9 @@ def analyse(
             float(np.median(true_errors)) if true_errors else None
         ),
         t_expose_s=exposure,
+        track_first_s=track_first,
+        track_lost_s=track_lost,
+        track_confirmed_fraction=track_fraction if track_first is not None else None,
         cep_series=tuple(cep_series),
         timeline=tuple(events),
         attribution=tuple(attribution),
@@ -382,6 +422,18 @@ def render_html(report: AarReport, replay: Replay) -> str:
     """自包含单页报告：内联 CSS + 手绘 SVG，不引外部资源。"""
     scene = html.escape(str(replay.meta.get("scenario", "replay")))
     sentence = html.escape(report.sentence)
+    if report.track_first_s is not None:
+        bits = [f"航迹 t={report.track_first_s:.0f} s 起批"]
+        bits.append(
+            f"t={report.track_lost_s:.0f} s 丢失"
+            if report.track_lost_s is not None
+            else "保持跟踪"
+        )
+        if report.track_confirmed_fraction is not None:
+            bits.append(f"确认覆盖 {report.track_confirmed_fraction:.0%}")
+        track_line = html.escape(" · ".join(bits))
+    else:
+        track_line = "航迹：从未确认（单帧定位点不足以起批）"
 
     def stat(label: str, value: str, note: str = "") -> str:
         return (
@@ -429,6 +481,7 @@ def render_html(report: AarReport, replay: Replay) -> str:
          font-family:"Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif; }}
   h1 {{ font-size:20px; margin:0 0 4px; }}
   .sub {{ color:var(--muted); font-size:12.5px; margin:0 0 18px; }}
+  .trackline {{ margin:6px 0 0; color:var(--muted); font-size:13px; }}
   .verdict {{ background:#fff; border:1px solid var(--line); border-left:4px solid var(--jam);
               border-radius:10px; padding:14px 16px; font-size:14px; line-height:1.65; }}
   .stats {{ display:flex; flex-wrap:wrap; gap:10px; margin:16px 0 20px; }}
@@ -452,6 +505,7 @@ def render_html(report: AarReport, replay: Replay) -> str:
 <p class="sub">目标 {html.escape(report.emitter)} · {report.n_ticks} 帧 · 解出位置 {report.n_fixes} 帧 · 门槛 {report.threshold_m:.0f} m</p>
 
 <div class="verdict">{sentence}</div>
+<p class="trackline">{track_line}</p>
 <div class="stats">{stats}</div>
 
 <div class="card">

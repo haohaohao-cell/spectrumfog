@@ -206,6 +206,48 @@ score:
 两者的比值就是滤波器的自信程度——差太多说明协方差不可信。</p>
 <p><strong>暴露时长用自报 CEP 判定</strong>（操作员视角：他以为定住了就算暴露）；
 真实误差只用来评估这套估计到底准不准。两套口径都在报告里，不许混用。</p>
+<h2 id="4-t3b">4. 航迹指标（T3b+）</h2>
+<p>定位点只是<strong>量测</strong>；蓝方真正关心的是有没有一条稳定的航迹。航迹层（<code>engine/tracker.py</code>）
+每帧：预测 → 马氏门限 + 米制半径关联 → 卡尔曼更新 → 起批/确认/滑行/删除。</p>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th>定义</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>track_confirmed_fraction</code></td>
+<td>确认航迹存在的帧 / 总帧数</td>
+<td>跟踪质量</td>
+</tr>
+<tr>
+<td><code>first_track_s</code></td>
+<td>首次确认的时刻</td>
+<td>反应速度</td>
+</tr>
+<tr>
+<td><code>track_lost_s</code></td>
+<td>确认航迹被判丢失的时刻</td>
+<td>生存性</td>
+</tr>
+<tr>
+<td><code>n_tracks</code></td>
+<td>同一辐射源的航迹条数</td>
+<td>抖动与重起</td>
+</tr>
+</tbody>
+</table>
+<p>关键区别：<strong>航迹确认不要求 CEP ≤ 门槛</strong>。确认条件只是"累计 3 次命中"，
+所以 <code>first_track_s</code> 通常早于 <code>first_effective_s</code>。两者回答不同的问题：</p>
+<ul>
+<li><code>first_effective_s</code>：蓝方<strong>第一次解算到足够准</strong>（CEP 进门限）；</li>
+<li><code>first_track_s</code>：蓝方<strong>第一次认为这是一条稳定航迹</strong>（M-of-N）。</li>
+</ul>
+<p>另外，确认后的航迹可以<strong>滑行</strong>（只预测不更新）最多 5 帧再判丢失，
+所以"丢一帧"不等于"丢航迹"——这正是单帧 <code>detected=False</code> 做不到的事。</p>
   </main>
 </div>
 <footer>参数全部虚构 · 仅用于教学 / 研究仿真 · Apache-2.0 + CC BY 4.0</footer>
