@@ -26,8 +26,9 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Callable, Mapping
 from pathlib import Path
-from typing import Any, Callable, Literal, Mapping
+from typing import Any, Literal
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -211,7 +212,7 @@ class Scenario(BaseModel):
     objectives: tuple[Objective, ...] = ()
 
     @model_validator(mode="after")
-    def _check_consistency(self) -> "Scenario":
+    def _check_consistency(self) -> Scenario:
         if not self.platforms:
             raise ValueError("想定至少需要一个平台")
         platform_ids = [item.id for item in self.platforms]

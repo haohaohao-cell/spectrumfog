@@ -143,7 +143,7 @@ def test_link_availability_is_reported_in_the_summary():
 
 
 def test_replay_carries_comms_frames():
-    from spectrumfog.replay import Replay, build_frames
+    from spectrumfog.replay import build_frames
 
     result = Simulation(load_scenario(TRIAD_YAML)).run()
     frames = build_frames([e for e in result.events if e["kind"] != "meta"])

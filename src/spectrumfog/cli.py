@@ -18,7 +18,7 @@ from pathlib import Path
 
 from . import __version__, aar
 from .engine.sim import Simulation
-from .model.scenario import Scenario, load_scenario
+from .model.scenario import load_scenario
 from .physics import radar
 from .replay import Replay, write_replay
 from .units import linear_to_db
@@ -295,7 +295,7 @@ def _sim(args: argparse.Namespace) -> int:
     )
     flip = summary["pd_below_threshold_at_s"]
     print(
-        f"  Pd 跌破门槛        "
+        "  Pd 跌破门槛        "
         + ("未跌破（全程可检测）" if flip is None else f"t = {flip:.0f} s")
     )
     print(
@@ -434,12 +434,12 @@ def _aar(args: argparse.Namespace) -> int:
     print(f"  {report.sentence}")
     print()
     print(
-        f"  首次有效定位   "
+        "  首次有效定位   "
         + ("无（未跌破门槛）" if report.first_effective_s is None
            else f"{report.first_effective_s:.0f} s，CEP {report.first_effective_cep_m:.0f} m")
     )
     print(
-        f"  最精确的一次   "
+        "  最精确的一次   "
         + ("—" if report.best_cep_m is None
            else f"{report.best_cep_m:.0f} m（t = {report.best_cep_s:.0f} s）")
     )
@@ -664,6 +664,7 @@ def _bench(args: argparse.Namespace) -> int:
         except (OSError, json.JSONDecodeError) as exc:
             print(f"[错误] 读不了提交物：{exc}", file=sys.stderr)
             return 1
+        assert suite is not None  # parser 保证：--verify 会先加载 suite
         try:
             problems = verify_submission(payload, suite)
         except (ValueError, FileNotFoundError) as exc:
@@ -674,6 +675,7 @@ def _bench(args: argparse.Namespace) -> int:
             for problem in problems:
                 print(f"  - {problem}", file=sys.stderr)
             return 1
+        assert suite is not None
         print(
             f"[通过] {args.verify.name}：想定 {len(payload.get('scenarios', {}))} 份、"
             f"结果 {len(payload.get('rows', []))} 行，与 {suite.name} v{suite.version} 一致"

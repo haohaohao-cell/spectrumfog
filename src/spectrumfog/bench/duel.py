@@ -31,7 +31,6 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Sequence
 
 import gymnasium as gym
 import numpy as np
@@ -153,7 +152,7 @@ class DuelEnv(gym.Env):
         self._trackers = self._new_trackers()
         return self._observations(), self._info()
 
-    def step(self, red_action: int, blue_action: int):
+    def step(self, red_action: int, blue_action: int):  # type: ignore[override]
         red_action = int(red_action)
         blue_action = int(blue_action)
         if not 0 <= red_action < self.red_action_space.n:
@@ -428,9 +427,13 @@ class DuelEnv(gym.Env):
 
 
 class _RedPolicy:
-    name = "red-?"
-    def reset(self, *, seed: int | None = None) -> None: ...
-    def act(self, observation: np.ndarray) -> int: ...
+    name: str = "red-?"
+
+    def reset(self, *, seed: int | None = None) -> None:
+        return None
+
+    def act(self, observation: np.ndarray) -> int:
+        raise NotImplementedError
 
 
 class RedStayJam(_RedPolicy):
@@ -471,9 +474,13 @@ class RedRaider(_RedPolicy):
 
 
 class _BluePolicy:
-    name = "blue-?"
-    def reset(self, *, seed: int | None = None) -> None: ...
-    def act(self, observation: np.ndarray) -> int: ...
+    name: str = "blue-?"
+
+    def reset(self, *, seed: int | None = None) -> None:
+        return None
+
+    def act(self, observation: np.ndarray) -> int:
+        raise NotImplementedError
 
 
 class BlueAlwaysOn(_BluePolicy):
@@ -522,8 +529,8 @@ class BlueReactive(_BluePolicy):
         return 2
 
 
-RED_BASELINES: tuple[type, ...] = (RedStayJam, RedSilent, RedRaider)
-BLUE_BASELINES: tuple[type, ...] = (BlueAlwaysOn, BluePulse, BlueReactive)
+RED_BASELINES: tuple[type[_RedPolicy], ...] = (RedStayJam, RedSilent, RedRaider)
+BLUE_BASELINES: tuple[type[_BluePolicy], ...] = (BlueAlwaysOn, BluePulse, BlueReactive)
 
 
 def _make(policy_cls, name: str):

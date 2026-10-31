@@ -16,10 +16,11 @@ from __future__ import annotations
 import hashlib
 import json
 import platform
+from collections.abc import Iterable, Sequence
 from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Iterable, Sequence
+from typing import Any
 
 import yaml
 
@@ -136,7 +137,7 @@ def build_submission(
         "schema": SUBMISSION_SCHEMA,
         "label": label,
         "created": created
-        or datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds"),
+        or datetime.now(UTC).astimezone().isoformat(timespec="seconds"),
         "suite": {
             "name": suite.name,
             "version": suite.version,
@@ -228,7 +229,6 @@ def render_leaderboard(
     if not entries:
         lines.append("| — | *还没有提交* | — | — | — | — |")
     for index, entry in enumerate(entries, start=1):
-        suite = entry.get("suite") or {}
         rows = entry.get("rows") or []
         scenario_count = len({row.get("scenario") for row in rows})
         environment = entry.get("environment") or {}

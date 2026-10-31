@@ -24,12 +24,13 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
-from typing import Any, Iterable, Sequence
+from typing import Any
 
 import numpy as np
 
-from .tracker import CHI2_2D_99, Track, smoothing_noise
+from .tracker import CHI2_2D_99, smoothing_noise
 
 __all__ = ["IMMTrack", "IMMTracker", "MODE_NAMES"]
 
@@ -210,7 +211,7 @@ class IMMTracker:
     def _measurement_covariance(self, covariance: np.ndarray) -> np.ndarray:
         return np.asarray(covariance, dtype=float) * (self.measurement_sigma_inflation**2)
 
-    def _gate(self, track: IMMTrack, position: np.ndarray, covariance: np.ndarray) -> list[tuple[float, np.ndarray, np.ndarray]]:
+    def _gate(self, track: IMMTrack, position: Any, covariance: Any) -> list[tuple[float, np.ndarray, np.ndarray]]:
         """返回门内的 (似然, 新息, S) 列表；S 取加权后的协方差。"""
         h = np.array([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0]])
         r = self._measurement_covariance(covariance)
@@ -248,7 +249,7 @@ class IMMTracker:
         combined = betas @ innovations
         spread = sum(
             beta * np.outer(innovation - combined, innovation - combined)
-            for beta, innovation in zip(betas, innovations)
+            for beta, innovation in zip(betas, innovations, strict=True)
         )
         combined_measurement = h @ track.state + combined  # 绝对量测（合成后）
 
@@ -291,7 +292,7 @@ class IMMTracker:
     def step(
         self, fixes: Iterable[tuple[Sequence[float], np.ndarray]], t_s: float
     ) -> list[dict[str, Any]]:
-        fixes = [
+        fixes: list[tuple[Any, Any]] = [
             (np.asarray(position, dtype=float), np.asarray(covariance, dtype=float))
             for position, covariance in fixes
         ]

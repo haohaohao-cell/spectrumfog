@@ -17,8 +17,12 @@ jobs:
           python-version: "3.12"
       - name: install
         run: pip install -e ".[dev,bench]"
+      - name: lint
+        run: |
+          ruff check src tests tools viz/static
+          mypy
       - name: test
-        run: python -m pytest -q
+        run: python -m pytest -q --cov --cov-report=term --cov-fail-under=90
       - name: docs site is up to date
         run: |
           pip install "markdown>=3.5"

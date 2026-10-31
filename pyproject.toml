@@ -23,7 +23,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=7.0"]
+dev = ["pytest>=7.0", "pytest-cov>=5", "ruff>=0.6", "mypy>=1.10"]
 # T1 之后才会用到，先不装：
 bench = ["gymnasium>=1.0"]
 # 只用于生成文档站（tools/build_docs.py），内核不依赖：
@@ -51,3 +51,49 @@ testpaths = ["tests"]
 # src: 内核；. : 仓库根的 viz 包（测试里要 import viz.static.plot）
 pythonpath = ["src", "."]
 addopts = "-ra"
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+extend-exclude = ["viz/web", "out", "build"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "B", "UP"]
+ignore = [
+  "E501",   # 中文注释不好按字符数断行
+  "B008",   # pydantic Field(...) 当默认值是惯用法
+]
+
+[tool.mypy]
+python_version = "3.12"
+# 类型检查从"最需要的地方"开始：物理公式与数据模型（想定/平台/辐射源），
+# 这两块一旦类型错了，数字会静默地算错。engine/bench 里有大量 numpy 与
+# pydantic 的动态用法，逐行消音只会制造噪音——等它们的接口稳定了再纳入。
+files = [
+  "src/spectrumfog/physics",
+  "src/spectrumfog/model",
+  "src/spectrumfog/units.py",
+  "src/spectrumfog/metrics.py",
+  "src/spectrumfog/bands.py",
+  "src/spectrumfog/replay.py",
+]
+ignore_missing_imports = true
+check_untyped_defs = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = false
+disable_error_code = ["import-untyped"]
+
+[[tool.mypy.overrides]]
+# 画图代码依赖 matplotlib 的重载，类型噪音大，不纳入检查
+module = ["viz.*"]
+ignore_errors = true
+
+[tool.coverage.run]
+source = ["spectrumfog"]
+branch = false
+
+[tool.coverage.report]
+skip_covered = true
+show_missing = true
+exclude_lines = ["pragma: no cover", "if TYPE_CHECKING:", "raise NotImplementedError"]

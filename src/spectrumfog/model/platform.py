@@ -49,7 +49,7 @@ class Platform(BaseModel):
     emitters: tuple[Emitter, ...] = ()
 
     @model_validator(mode="after")
-    def _sort_waypoints(self) -> "Platform":
+    def _sort_waypoints(self) -> Platform:
         if not self.waypoints:
             return self
         ordered = tuple(sorted(self.waypoints, key=lambda waypoint: waypoint.t))
@@ -61,7 +61,7 @@ class Platform(BaseModel):
 
     # --- 查询 -------------------------------------------------------------
 
-    def distance_to(self, other: "Platform") -> float:
+    def distance_to(self, other: Platform) -> float:
         """两平台在 t = 0 时的平面距离 [m]。"""
         return math.dist(self.pos, other.pos)
 

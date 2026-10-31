@@ -26,9 +26,10 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterator, Mapping, Sequence
+from typing import Any
 
 __all__ = [
     "EVENT_KINDS",
@@ -113,7 +114,7 @@ class Replay:
     frames: tuple[Frame, ...]
 
     @classmethod
-    def load(cls, path: str | Path) -> "Replay":
+    def load(cls, path: str | Path) -> Replay:
         events = read_replay(path)
         meta = next((event for event in events if event["kind"] == "meta"), None)
         if meta is None:

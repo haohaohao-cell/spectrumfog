@@ -14,7 +14,7 @@
 from __future__ import annotations
 
 import math
-from typing import Annotated, Literal, Union
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -186,6 +186,6 @@ class DecoyEmitter(_EmitterBase):
 
 #: 想定 emitters 列表的元素类型，按 ``kind`` 字段分派。
 Emitter = Annotated[
-    Union[RadarEmitter, NoiseJammerEmitter, CommsEmitter, DecoyEmitter],
+    RadarEmitter | NoiseJammerEmitter | CommsEmitter | DecoyEmitter,
     Field(discriminator="kind"),
 ]

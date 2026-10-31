@@ -109,7 +109,6 @@ def test_table_matches_physics_at_grid_points(bundle):
 
 def test_detection_ring_grows_with_jammer_range(bundle):
     """干扰机越远，检测边界越大（T2 拖动时环跟着放大）。"""
-    rj = np.asarray(bundle["rings"]["jammer_range_m"])
     detection = np.asarray(bundle["rings"]["detection_m"])
     assert np.all(np.diff(detection) > 0)
 
@@ -119,8 +118,8 @@ def test_detection_ring_grows_with_jammer_range(bundle):
 
 
 def test_burn_through_ring_follows_sqrt_law(bundle):
-    rj = np.asarray(bundle["rings"]["jammer_range_m"])
     burn = np.asarray(bundle["rings"]["burn_through_m"])
+    rj = np.asarray(bundle["rings"]["jammer_range_m"])
     params = load_scenario(STANDOFF_YAML).link_params()
     r_bt_self = float(
         radar.burn_through_range(

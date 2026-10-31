@@ -20,6 +20,7 @@
 from __future__ import annotations
 
 import math
+from typing import Any
 
 import gymnasium as gym
 import numpy as np
@@ -29,7 +30,7 @@ from ..bands import in_band
 from ..engine import detect, fusion
 from ..metrics import cep_from_covariance
 from ..model.scenario import Scenario
-from ..physics import comms, propagation, radar
+from ..physics import propagation, radar
 
 __all__ = ["SpectrumFogEnv", "POWER_LEVELS", "DIRECTIONS", "decode_action"]
 
@@ -107,7 +108,12 @@ class SpectrumFogEnv(gym.Env):
         self._power = 1.0
         self._step_index = 0
         self._warning: list[bool] = []
-        self._last = {"pd": 0.0, "cep": float("nan"), "localized": False, "js": 0.0}
+        self._last: dict[str, Any] = {
+            "pd": 0.0,
+            "cep": float("nan"),
+            "localized": False,
+            "js": 0.0,
+        }
 
     # --- gym API ---------------------------------------------------------
 

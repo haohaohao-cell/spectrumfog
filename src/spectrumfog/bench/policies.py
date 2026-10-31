@@ -6,7 +6,6 @@
 
 from __future__ import annotations
 
-import math
 from typing import Protocol
 
 import numpy as np
@@ -40,7 +39,7 @@ class Policy(Protocol):
 class RandomPolicy:
     """均匀随机动作——用来给表格一个下限。"""
 
-    name = "random"
+    name: str = "random"
 
     def __init__(self) -> None:
         self._rng = np.random.default_rng(0)
@@ -99,7 +98,11 @@ class StealthPolicy:
         return _STAY * len(POWER_LEVELS) + _FULL  # 压到近处再开火
 
 
-POLICIES: tuple[type, ...] = (RandomPolicy, AlwaysJamPolicy, StealthPolicy)
+POLICIES: tuple[type[RandomPolicy] | type[AlwaysJamPolicy] | type[StealthPolicy], ...] = (
+    RandomPolicy,
+    AlwaysJamPolicy,
+    StealthPolicy,
+)
 
 
 def make_policy(name: str) -> Policy:

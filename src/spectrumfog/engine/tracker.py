@@ -17,8 +17,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
-from typing import Any, Iterable, Sequence
+from typing import Any
 
 import numpy as np
 
@@ -186,7 +187,11 @@ class Tracker:
         self, fixes: Iterable[tuple[Sequence[float], np.ndarray]], t_s: float
     ) -> list[dict[str, Any]]:
         """推进一帧：预测 → 关联 → 更新/滑行 → 起批/删除，返回本帧的 track 事件。"""
-        fixes = [(np.asarray(pos, dtype=float), np.asarray(cov, dtype=float)) for pos, cov in fixes]
+        pairs: list[tuple[Any, Any]] = [
+            (np.asarray(pos, dtype=float), np.asarray(cov, dtype=float))
+            for pos, cov in fixes
+        ]
+        fixes = pairs
 
         # 1) 预测（先验）
         self.predict()
@@ -218,7 +223,7 @@ class Tracker:
         for track_index, track in enumerate(self.tracks):
             if track.status == "lost":
                 continue
-            fix_index = assigned.get(track_index)
+            fix_index: int | None = assigned.get(track_index)
             if fix_index is not None:
                 position, covariance = fixes[fix_index]
                 if self._accept_update(track, position, covariance):

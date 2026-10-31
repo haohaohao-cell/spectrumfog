@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import numpy as np
 import pytest
 
 from spectrumfog.bench.duel import (
@@ -64,7 +63,7 @@ def test_blue_on_is_tracked_when_red_keeps_looking(scenario):
     env = DuelEnv(scenario)
     env.reset(seed=0)
     exposed = 0
-    for step in range(30):
+    for _ in range(30):
         _, _, _, _, info = env.step(2, 2)  # 红方满功率、蓝方满功率
         exposed += int(info["blue_exposed"])
     assert exposed > 0

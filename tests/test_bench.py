@@ -7,19 +7,19 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-gym = pytest.importorskip("gymnasium")
+gym = pytest.importorskip("gymnasium")  # noqa: E402
 
-from spectrumfog.bench.env import POWER_LEVELS, SpectrumFogEnv, decode_action
-from spectrumfog.bench.policies import (
+from spectrumfog.bench.env import SpectrumFogEnv, decode_action  # noqa: E402
+from spectrumfog.bench.policies import (  # noqa: E402
     POLICIES,
     AlwaysJamPolicy,
     RandomPolicy,
     StealthPolicy,
     make_policy,
 )
-from spectrumfog.bench.runner import format_table, run_bench, run_episode, write_json
-from spectrumfog.cli import main
-from spectrumfog.model.scenario import parse_scenario
+from spectrumfog.bench.runner import format_table, run_bench, run_episode, write_json  # noqa: E402
+from spectrumfog.cli import main  # noqa: E402
+from spectrumfog.model.scenario import parse_scenario  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 

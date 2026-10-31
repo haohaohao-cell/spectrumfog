@@ -7,9 +7,9 @@
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, dataclass, field
+from collections.abc import Iterable, Sequence
+from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Iterable, Sequence
 
 from ..model.scenario import Scenario
 from .policies import Policy, make_policy

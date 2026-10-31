@@ -13,9 +13,10 @@ from __future__ import annotations
 
 import html
 import math
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any
 
 import numpy as np
 
@@ -99,7 +100,7 @@ def analyse(
         else meta.get("cep_threshold_m", 500.0)
     )
 
-    truth: dict[str, tuple[float, float]] = {}
+    truth: dict[float, tuple[float, float]] = {}
     sensor_positions: dict[str, tuple[float, float]] = {}
     events: list[KeyEvent] = []
     cep_series: list[tuple[float, float, float]] = []

@@ -14,9 +14,10 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import math
-from typing import Any, Sequence
+from collections.abc import Sequence
+from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 
@@ -27,9 +28,9 @@ from ..model.platform import Platform
 from ..model.scenario import Scenario
 from ..physics import comms, propagation, radar
 from . import detect, fusion
+from .clock import Clock
 from .imm import IMMTracker
 from .tracker import Tracker
-from .clock import Clock
 
 __all__ = ["Simulation", "SimulationResult"]
 

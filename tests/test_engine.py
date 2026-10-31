@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from itertools import pairwise
 from pathlib import Path
 
 import pytest
@@ -93,7 +94,7 @@ def test_seed_changes_sampling_but_not_physics():
 
     links_a = [event for event in run_a.events if event["kind"] == "link"]
     links_b = [event for event in run_b.events if event["kind"] == "link"]
-    for left, right in zip(links_a, links_b):
+    for left, right in zip(links_a, links_b, strict=True):
         assert left["pd"] == right["pd"]
         assert left["js"] == right["js"]
 
@@ -115,10 +116,11 @@ def test_standoff_physics_is_monotone_in_time():
         event["detection_ring_m"] for event in links if event["detection_ring_m"] is not None
     ]
 
-    assert all(later > earlier for earlier, later in zip(js, js[1:]))
-    assert all(later < earlier for earlier, later in zip(pd, pd[1:]))
-    assert all(later < earlier for earlier, later in zip(burn, burn[1:]))
-    assert all(later < earlier for earlier, later in zip(rings, rings[1:]))
+    # pairwise 比 zip(xs, xs[1:]) 更直白，也不会退化成"长度不等"的坑
+    assert all(later > earlier for earlier, later in pairwise(js))
+    assert all(later < earlier for earlier, later in pairwise(pd))
+    assert all(later < earlier for earlier, later in pairwise(burn))
+    assert all(later < earlier for earlier, later in pairwise(rings))
 
 
 def test_standoff_summary_matches_the_story():

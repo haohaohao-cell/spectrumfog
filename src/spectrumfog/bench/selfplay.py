@@ -21,8 +21,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Any, Callable, Sequence
+from typing import Any
 
 import numpy as np
 
@@ -63,7 +64,7 @@ class LinearSoftmax:
         return cls(rng.normal(0.0, scale, size=(n_actions, n_obs)))
 
     @property
-    def shape(self) -> tuple[int, int]:
+    def shape(self) -> tuple[int, ...]:
         return self.weights.shape
 
     def logits(self, observation: np.ndarray) -> np.ndarray:
