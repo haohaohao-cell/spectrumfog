@@ -222,6 +222,33 @@ spectrumfog bench --leaderboard submissions --write-md docs/leaderboard.md
 </ol>
 <p>当前榜单：<a href="leaderboard.html">docs/leaderboard.md</a>（文档站“排行榜”页）。</p>
 <h2 id="_5">排行榜</h2>
+<h3 id="v1-v2">两套尺子：v1 与 v2</h3>
+<table>
+<thead>
+<tr>
+<th>版本</th>
+<th>想定</th>
+<th>什么时候用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>v1（2026-10-27）</td>
+<td>01–06</td>
+<td>最初那批提交，<strong>原样保留</strong></td>
+</tr>
+<tr>
+<td>v2（2026-10-31）</td>
+<td>01–08</td>
+<td>加了处理增益对照与双向暴露之后</td>
+</tr>
+</tbody>
+</table>
+<p>两套并列、互不覆盖：<code>--verify</code> 必须配对应的 <code>--suite</code>。跨版本分数不可比——
+尺子换了，分数就没有可比性，所以榜单按版本分组。</p>
+<pre><code class="language-bash">spectrumfog bench --suite scenarios/suite_v2.yaml --submit --label 你的名字
+spectrumfog bench --verify submissions/你的名字-spectrumfog-v2-*.json --suite scenarios/suite_v2.yaml
+</code></pre>
 <p><code>--markdown out/leaderboard.md</code> 生成：</p>
 <table>
 <thead>

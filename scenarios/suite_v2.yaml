@@ -1,0 +1,31 @@
+# 想定集合 v2 —— 在 v1 的六个想定上加两份新的
+#
+# v1（2026-10-27）只有 01–06。之后加了：
+#   07_gain     处理增益 A/B（40 dB 对照）
+#   08_duel_2p  双向暴露（蓝方也有 ESM，红方不再"打瞎子"）
+#
+# **v1 原样保留**：它的提交物仍然有效，`--verify` 用 v1 校验时不会碰 v2。
+# 两套榜并列显示，因为跨版本的分数不可比——尺子换了，分数就没有可比性。
+#
+# 用法：
+#   spectrumfog bench --suite scenarios/suite_v2.yaml --submit --label baselines
+#   spectrumfog bench --verify submissions/baselines-spectrumfog-v2-*.json --suite scenarios/suite_v2.yaml
+
+version: 2
+name: spectrumfog-v2
+created: "2026-10-31"
+description: >-
+  v1 的六个想定 + 处理增益对照（07_gain）+ 双向暴露（08_duel_2p）。
+
+seeds: [0, 1, 2, 3, 4]
+policies: [random, always-jam, stealth]
+
+scenarios:
+  - scenarios/01_duel.yaml
+  - scenarios/02_standoff.yaml
+  - scenarios/03_triad.yaml
+  - scenarios/04_fog.yaml
+  - scenarios/05_mobile.yaml
+  - scenarios/06_decoy.yaml
+  - scenarios/07_gain.yaml
+  - scenarios/08_duel_2p.yaml

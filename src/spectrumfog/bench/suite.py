@@ -214,26 +214,33 @@ def render_leaderboard(
     submissions: Iterable[dict[str, Any]], *, title: str = "排行榜"
 ) -> str:
     """把提交物渲染成 markdown 表（按得分降序）。"""
-    entries = sorted(
-        submissions, key=lambda item: float(item.get("score", -1e9)), reverse=True
-    )
+    def suite_key(item: dict[str, Any]) -> tuple[int, float]:
+        version = int((item.get("suite") or {}).get("version", 0) or 0)
+        return (version, float(item.get("score", -1e9)))
+
+    # 先按尺子版本分组（新版本在前），同版本内按得分降序：
+    # 跨版本的分数不可比，混在一张表里排序会误导。
+    entries = sorted(submissions, key=suite_key, reverse=True)
     lines = [
         f"# {title}",
         "",
-        "同一把尺子：想定集合、种子、策略都固定（见 `scenarios/suite_v1.yaml`）。",
+        "同一把尺子：在每个版本内，想定集合、种子、策略都固定——",
+        "v1 见 `scenarios/suite_v1.yaml`（6 个想定），v2 见 `scenarios/suite_v2.yaml`（8 个）。",
+        "**跨版本的分数不可比**：尺子换了，分数就没有可比性，所以表里按版本分组。",
         "得分 = 各（想定 × 策略）平均奖励；奖励 = 干扰/压制有效 +1、被有效定位 −1。",
         "",
-        "| # | 提交 | 得分 | 想定数 | 环境 | 日期 |",
-        "|---|---|---|---|---|---|",
+        "| # | 提交 | 尺子 | 得分 | 想定数 | 环境 | 日期 |",
+        "|---|---|---|---|---|---|---|",
     ]
     if not entries:
-        lines.append("| — | *还没有提交* | — | — | — | — |")
+        lines.append("| — | *还没有提交* | — | — | — | — | — |")
     for index, entry in enumerate(entries, start=1):
         rows = entry.get("rows") or []
         scenario_count = len({row.get("scenario") for row in rows})
         environment = entry.get("environment") or {}
         lines.append(
             f"| {index} | `{entry.get('label', '?')}` | "
+            f"v{(entry.get('suite') or {}).get('version', '?')} | "
             f"{float(entry.get('score', 0.0)):.2f} | {scenario_count} | "
             f"py{environment.get('python', '?')} / gym{environment.get('gymnasium', '?')} | "
             f"{str(entry.get('created', ''))[:10]} |"

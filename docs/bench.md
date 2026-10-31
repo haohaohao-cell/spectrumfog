@@ -135,6 +135,21 @@ spectrumfog bench --leaderboard submissions --write-md docs/leaderboard.md
 
 ## 排行榜
 
+### 两套尺子：v1 与 v2
+
+| 版本 | 想定 | 什么时候用 |
+|---|---|---|
+| v1（2026-10-27） | 01–06 | 最初那批提交，**原样保留** |
+| v2（2026-10-31） | 01–08 | 加了处理增益对照与双向暴露之后 |
+
+两套并列、互不覆盖：`--verify` 必须配对应的 `--suite`。跨版本分数不可比——
+尺子换了，分数就没有可比性，所以榜单按版本分组。
+
+```bash
+spectrumfog bench --suite scenarios/suite_v2.yaml --submit --label 你的名字
+spectrumfog bench --verify submissions/你的名字-spectrumfog-v2-*.json --suite scenarios/suite_v2.yaml
+```
+
 `--markdown out/leaderboard.md` 生成：
 
 | 想定 | 策略 | 奖励（均值±标准差） | 干扰有效率 | 暴露率 | Pd 均值 | 首告警 |

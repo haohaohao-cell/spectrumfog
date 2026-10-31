@@ -1,7 +1,7 @@
 {
   "schema": "spectrumfog.submission/2",
   "label": "baselines",
-  "created": "2026-10-31T17:53:03+08:00",
+  "created": "2026-10-31T23:53:03+08:00",
   "suite": {
     "name": "spectrumfog-v1",
     "version": 1,
@@ -21,10 +21,10 @@
   "scenarios": {
     "scenarios/01_duel.yaml": "sha256:673ef3e93c9b6192fc8ed58dc3a5c12c621ff52b0e48ad6dc9ce9e84aa44b436",
     "scenarios/02_standoff.yaml": "sha256:dca7e002c1635b1e4642350570174f052310065754591bf4e08d042b286df404",
-    "scenarios/03_triad.yaml": "sha256:5bfa95788031fbbc0d625626cb3f4a4343763275270eab8d56cf3521653952a2",
+    "scenarios/03_triad.yaml": "sha256:415fc8aa50b1fde4c544a3bbfc185121edf11f3fb0297d3827e79125fe1f0a03",
     "scenarios/04_fog.yaml": "sha256:ee14e3328bed369bd98c249bbdaf7527b20bbe8387e6e593bb0c9c5b304137c4",
     "scenarios/05_mobile.yaml": "sha256:406982f476b3048c12733eabc009c0ec74774b0d16427015ef0e22fbf5965f18",
-    "scenarios/06_decoy.yaml": "sha256:96cd21d75e3247036893a597600b6fbabf33ea299fc6f59bc5f211ae6f574f21"
+    "scenarios/06_decoy.yaml": "sha256:5d7f5e795346c366b6b0796ed6b52f12cce21d556e9d08ccc6cca1322010e476"
   },
   "score": 45.7607,
   "rows": [
